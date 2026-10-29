@@ -27,7 +27,7 @@ jobs:
       DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: true
       - name: Install dependencies

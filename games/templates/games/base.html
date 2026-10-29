@@ -1,0 +1,95 @@
+{% load static i18n_extras %}
+<!DOCTYPE html>
+<html lang="{{ request.LANGUAGE_CODE|default:'ru' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}HDD Verified{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'games/app.css' %}">
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="{% url 'home' %}">
+      <span class="brand-mark" aria-hidden="true">HDD</span>
+      <span class="brand-text">
+        <span class="brand-name">HDD Verified</span>
+        <span class="brand-tagline">{% t "app.tagline" %}</span>
+      </span>
+    </a>
+
+    <div class="header-actions">
+      <form class="lang-menu" action="{% url 'set_language' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <details class="lang-menu__details" data-menu>
+          <summary class="lang-menu__summary" aria-label="{% t 'nav.language' %}">
+            <span class="lang-menu__code">{% if request.LANGUAGE_CODE|slice:':2' == 'uk' %}UA{% else %}{{ request.LANGUAGE_CODE|slice:':2'|upper }}{% endif %}</span>
+            <span class="lang-menu__chevron" aria-hidden="true"></span>
+          </summary>
+          <div class="lang-menu__list">
+            <button type="submit" name="language" value="ru" lang="ru"
+                    class="lang-menu__item{% if request.LANGUAGE_CODE|slice:':2' == 'ru' %} is-active{% endif %}">Русский</button>
+            <button type="submit" name="language" value="en" lang="en"
+                    class="lang-menu__item{% if request.LANGUAGE_CODE|slice:':2' == 'en' %} is-active{% endif %}">English</button>
+            <button type="submit" name="language" value="uk" lang="uk"
+                    class="lang-menu__item{% if request.LANGUAGE_CODE|slice:':2' == 'uk' %} is-active{% endif %}">Українська</button>
+          </div>
+        </details>
+      </form>
+
+      {% if user.is_authenticated %}
+        <details class="user-menu" data-menu>
+          <summary class="user-chip">
+            {% if user.steam_profile.avatar_url %}
+              <img class="avatar avatar--image" src="{{ user.steam_profile.avatar_url }}" alt="">
+            {% else %}
+              <span class="avatar" aria-hidden="true">{{ user.steam_profile.display_name|default:user.username|first|upper }}</span>
+            {% endif %}
+            <span class="user-name">{{ user.steam_profile.display_name|default:user.username }}</span>
+          </summary>
+          <div class="user-popover">
+            <p class="user-popover__name">{{ user.steam_profile.display_name|default:user.username }}</p>
+            <a class="user-popover__link" href="{% url 'my_drives' %}">{% t "nav.drives" %}</a>
+            <form method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button class="user-popover__link user-popover__button" type="submit">{% t "nav.logout" %}</button>
+            </form>
+          </div>
+        </details>
+      {% else %}
+        <a class="button button--ghost button--small" href="{% url 'login' %}">{% t "nav.login" %}</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+
+{% if messages %}
+  <div class="container messages">
+    {% for message in messages %}
+      <div class="message message--{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<main class="container">
+  {% block content %}{% endblock %}
+</main>
+
+<script>
+// Выпадающие меню в шапке (язык и профиль) закрываются по клику мимо
+// и по Esc — как обычные списки.
+document.querySelectorAll('details[data-menu]').forEach(menu => {
+  document.addEventListener('click', event => {
+    if (!menu.contains(event.target)) menu.open = false;
+  });
+  menu.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && menu.open) {
+      menu.open = false;
+      menu.querySelector('summary').focus();
+    }
+  });
+});
+</script>
+</body>
+</html>

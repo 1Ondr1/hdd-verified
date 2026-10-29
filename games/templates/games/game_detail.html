@@ -1,0 +1,456 @@
+{% extends "games/base.html" %}
+{% load i18n_extras %}
+
+{% block title %}{{ game.display_title }} — HDD Verified{% endblock %}
+
+{% block content %}
+<article class="game">
+  <div class="game-head">
+    {% if game.cover_url_display %}
+      <img class="cover" src="{{ game.cover_url_display }}" alt="{{ game.display_title }}"
+           {% if game.cover_fallback_url %}onerror="this.onerror=null;this.src='{{ game.cover_fallback_url|escapejs }}'"{% endif %}>
+    {% endif %}
+    <div class="game-main">
+      <div class="game-info">
+        <h1>{{ game.display_title }}</h1>
+        {% if game.display_genre or game.release_year or game.store_url_display %}
+          <p class="muted">
+            {% if game.display_genre %}{{ game.display_genre }}{% if game.release_year or game.store_url_display %} · {% endif %}{% endif %}
+            {% if game.release_year %}{{ game.release_year }}{% if game.store_url_display %} · {% endif %}{% endif %}
+            {% if game.store_url_display %}<a href="{{ game.store_url_display }}" target="_blank" rel="noopener">{{ game.get_source_display }}</a>{% endif %}
+          </p>
+        {% endif %}
+        {% if game.display_description %}
+          <div class="game-description" data-description>
+            <p>{{ game.display_description }}</p>
+          </div>
+          <button class="link-button game-description__toggle" type="button"
+                  data-description-toggle hidden
+                  data-more="{% t 'game.show_more' %}"
+                  data-less="{% t 'game.show_less' %}">{% t "game.show_more" %}</button>
+        {% endif %}
+      </div>
+
+      <dl class="facts">
+        <div class="fact">
+          <dt>{% t "game.requirement" %}</dt>
+          <dd>
+            {% if requirement_note %}{{ requirement_note }}{% else %}<span class="muted">—</span>{% endif %}
+          </dd>
+        </div>
+        <div class="fact">
+          <dt>{% t "game.install_size" %}</dt>
+          <dd>
+            {% if size.community_gb %}
+              <span class="fact__line fact__line--strong">
+                {% t "game.community_size" n=size.community_gb|floatformat:"-1" %}
+                <span class="muted">({% t "game.size_updated" date=size.latest|date:"d.m.Y" %})</span>
+              </span>
+            {% else %}
+              <span class="muted">{% t "game.size_no_reports" %}</span>
+            {% endif %}
+            {% if size.stale_reports %}
+              <span class="fact__warning">{% t "game.size_stale" %}</span>
+            {% endif %}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+
+  <section class="panel summary">
+    <div class="summary__main">
+      <div class="summary__head">
+        <h2>{% t "game.overall" %}</h2>
+        {% if overall.reports %}
+          <span class="summary__count muted">
+            {% tn "game.reports_count" overall.reports %}
+          </span>
+        {% endif %}
+      </div>
+
+      <div class="rating">
+        <span class="badge badge--{{ overall.level }}">{{ overall.label }}</span>
+        {% if overall.has_data %}<span class="score">{{ overall.percent }}%</span>{% endif %}
+      </div>
+
+      {% if not overall.has_data %}
+        <p class="rating__note muted">
+          {% if overall.reports %}
+            {% tn "game.min_reports" overall.reports %}
+          {% else %}
+            {% t "game.no_reports_yet" %}
+          {% endif %}
+        </p>
+      {% endif %}
+
+      {% if overall.reports %}
+        <div class="verdict-mix">
+          <h3 class="summary-card__subtitle">{% t "game.review_mix" %}</h3>
+          <div class="verdict-bar" aria-hidden="true">
+            {% for share in verdict_mix %}
+              {% if share.count %}<span class="verdict-bar__part verdict-bar__part--{{ share.key }}" style="width: {{ share.percent }}%"></span>{% endif %}
+            {% endfor %}
+          </div>
+          <ul class="verdict-legend">
+            {% for share in verdict_mix %}
+              <li{% if not share.count %} class="is-empty"{% endif %}>
+                <span class="dot dot--{{ share.key }}"></span>{{ share.label }} <b>{{ share.count }}</b>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="summary__aside">
+      <div class="prediction">
+        <h3 class="summary-card__subtitle">{% t "game.prediction_title" %}</h3>
+        {% if prediction %}
+          {% if prediction.drive_name %}
+            <p class="prediction__drive muted">
+              {{ prediction.drive_name }}{% if prediction.drive_specs %} · {{ prediction.drive_specs }}{% endif %}
+            </p>
+          {% endif %}
+          <p class="prediction__value">
+            <span class="badge badge--{{ prediction.level }}">{{ prediction.label }}</span>
+          </p>
+          {% if prediction.reports %}
+            <p class="prediction__basis muted">
+              {% tn "prediction.basis" prediction.reports %}
+            </p>
+          {% endif %}
+        {% else %}
+          <p class="prediction__hint muted">
+            {% if not user.is_authenticated %}
+              <a href="{% url 'login' %}?next={{ request.path|urlencode }}">{% t "prediction.login_link" %}</a>{% t "prediction.login_after" %}
+            {% elif not has_drives %}
+              <a href="{% url 'my_drives' %}">{% t "game.add_drive_link" %}</a>{% t "prediction.add_drive_after" %}
+            {% else %}
+              {% t "prediction.add_specs" %}
+            {% endif %}
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {% if profiles %}
+    {# Свёрнуто по умолчанию: блок нужен не всегда, а места занимает много. #}
+    <details class="panel classes-panel">
+      <summary class="panel-head classes-panel__head">
+        <h2>{% t "game.by_classes" %}</h2>
+        <span class="classes-panel__chevron" aria-hidden="true"></span>
+      </summary>
+      <div class="classes-panel__body">
+        <div class="class-list">
+          {% for profile in profiles %}
+            <div class="class-row class-row--{{ profile.level }}">
+              <span class="class-row__label">{{ profile.label }}</span>
+              <span class="class-row__track">
+                <span class="class-row__bar" style="width: {{ profile.percent }}%"></span>
+              </span>
+              <span class="class-row__percent">{{ profile.percent }}%</span>
+              <span class="class-row__verdict">{{ profile.level_label }}</span>
+              <span class="class-row__count muted">
+                {% tn "game.reports_count" profile.reports %}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </details>
+  {% endif %}
+
+  <section class="panel reports-panel">
+    <div class="panel-head">
+      <h2>{% t "game.reports" %}</h2>
+      <div class="panel-head__actions">
+        {% if filter_active %}
+          <span class="chip chip--accent">{% t "game.filter_active" n=reports|length %}</span>
+        {% endif %}
+        {% if user.is_authenticated %}
+          {% if form %}
+            <button class="button button--small" type="button" data-report-open>
+              {% if my_report %}{% t "game.rate_edit" %}{% else %}{% t "game.rate_button" %}{% endif %}
+            </button>
+          {% endif %}
+        {% else %}
+          <a class="button button--small" href="{% url 'login' %}?next={{ request.path|urlencode }}">{% t "game.rate_login" %}</a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if my_report %}
+      <p class="my-report">
+        <span class="muted">{% t "game.your_rating" %}</span>
+        <span class="badge badge--{{ my_report.verdict }}">{{ my_report.verdict_label }}</span>
+        <span class="muted">{{ my_report.drive_name|default:"" }}{% if my_report.specs %} · {{ my_report.specs }}{% endif %}</span>
+      </p>
+    {% endif %}
+    {% if user.is_authenticated and not has_drives %}
+      <p class="my-report muted">
+        <a href="{% url 'my_drives' %}">{% t "game.add_drive_link" %}</a>{% t "game.add_drive_after" %}
+      </p>
+    {% endif %}
+
+    <form class="form filter" method="get" action="{{ request.path }}">
+      {% for field in filter_form %}
+        <div class="field filter__field">
+          <div class="field__head">
+            {{ field.label_tag }}
+            {% if field.help_text %}
+              <span class="hint" tabindex="0" role="note" aria-label="{{ field.help_text }}" data-tip="{{ field.help_text }}">?</span>
+            {% endif %}
+          </div>
+          {{ field }}
+        </div>
+      {% endfor %}
+      <div class="filter__actions">
+        <button class="button button--small" type="submit">{% t "common.show" %}</button>
+        {% if my_filter_query %}
+          <a class="button button--ghost button--small" href="?{{ my_filter_query }}">{% t "game.filter_my" %}</a>
+        {% endif %}
+        {% if filter_active %}
+          <a class="link-button" href="{{ request.path }}">{% t "common.reset" %}</a>
+        {% endif %}
+      </div>
+    </form>
+
+    <div class="reports">
+      {% for report in reports %}
+        <div class="report" id="report-{{ report.id }}">
+          <div class="report-head">
+            <span class="badge badge--{{ report.verdict }}">{{ report.verdict_label }}</span>
+            <strong>{{ report.user.steam_profile.display_name|default:report.user.username }}</strong>
+            <span class="muted">
+              {% if report.drive_name %}{{ report.drive_name }}{% else %}{% t "game.no_drive" %}{% endif %}{% if report.specs %} · {{ report.specs }}{% endif %}
+            </span>
+            {% if report.stutter %}<span class="chip">{% t "report.stutter" value=report.stutter_label %}</span>{% endif %}
+            {% if report.load_speed %}<span class="chip">{% t "report.load" value=report.load_speed_label %}</span>{% endif %}
+            {% if report.install_size_gb %}<span class="chip">{% t "report.size" n=report.install_size_gb|floatformat:"-1" %}</span>{% endif %}
+          </div>
+          {% if report.comment %}
+            <p>{{ report.comment }}</p>
+            {% if report.comment_translation %}
+              <details class="report-translation"{% if report.id == translated_id %} open{% endif %}>
+                <summary>{% t "report.translate_show" %}</summary>
+                <p class="report-translation__text">{{ report.comment_translation }}</p>
+                <p class="report-translation__note muted">{% t "report.translate_note" %}</p>
+              </details>
+            {% elif translate_available %}
+              <form class="report-translation__form" method="post"
+                    action="{% url 'translate_comment' report.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="link-button report-translation__button">
+                  {% t "report.translate" %}
+                </button>
+              </form>
+            {% endif %}
+          {% endif %}
+        </div>
+      {% empty %}
+        <p class="muted">
+          {% if filter_active %}{% t "game.no_reports_filtered" %}{% else %}{% t "game.no_reports" %}{% endif %}
+        </p>
+      {% endfor %}
+    </div>
+  </section>
+</article>
+
+{% if user.is_authenticated and form %}
+  <dialog class="modal" id="report-dialog" aria-labelledby="report-dialog-title">
+    <div class="modal__body">
+      <div class="modal__head">
+        <h2 id="report-dialog-title">
+          {% if my_report %}{% t "game.rate_edit" %}{% else %}{% t "game.rate_button" %}{% endif %}
+        </h2>
+        <button class="modal__close" type="button" data-report-close
+                aria-label="{% t 'common.close' %}">
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/>
+          </svg>
+        </button>
+      </div>
+      <form method="post" action="{% url 'submit_report' game.source game.external_id %}" class="form form--report">
+        {% csrf_token %}
+        <div class="field field--wide field--drive">
+          <div class="field__head">
+            {{ form.drive.label_tag }}
+            <span class="hint" tabindex="0" role="note" aria-label="{{ form.drive.help_text }}" data-tip="{{ form.drive.help_text }}">?</span>
+          </div>
+          {{ form.drive }}
+          {{ form.drive.errors }}
+        </div>
+
+        <div class="field field--wide field--verdict">
+          {{ form.verdict.label_tag }}
+          {{ form.verdict }}
+          {{ form.verdict.errors }}
+        </div>
+
+        <div class="field">
+          {{ form.stutter.label_tag }}
+          {{ form.stutter }}
+          {{ form.stutter.errors }}
+        </div>
+
+        <div class="field">
+          <div class="field__head">
+            {{ form.load_speed.label_tag }}
+            <span class="hint" tabindex="0" role="note" aria-label="{{ form.load_speed.help_text }}" data-tip="{{ form.load_speed.help_text }}">?</span>
+          </div>
+          {{ form.load_speed }}
+          {{ form.load_speed.errors }}
+        </div>
+
+        <div class="field">
+          <div class="field__head">
+            {{ form.install_size_gb.label_tag }}
+            <span class="hint" tabindex="0" role="note" aria-label="{{ form.install_size_gb.help_text }}" data-tip="{{ form.install_size_gb.help_text }}">?</span>
+          </div>
+          {{ form.install_size_gb }}
+          {{ form.install_size_gb.errors }}
+        </div>
+
+        <div class="field field--wide">
+          <div class="field__head">
+            {{ form.comment.label_tag }}
+            <span class="hint" tabindex="0" role="note" aria-label="{{ form.comment.help_text }}" data-tip="{{ form.comment.help_text }}">?</span>
+          </div>
+          {{ form.comment }}
+          {{ form.comment.errors }}
+        </div>
+
+        <div class="modal__actions">
+          <button class="button" type="submit">{% t "game.save_report" %}</button>
+          <button class="button button--ghost" type="button" data-report-close>{% t "common.cancel" %}</button>
+          {% if my_report %}
+            <button class="button button--danger" type="submit"
+                    formaction="{% url 'delete_report' my_report.pk %}"
+                    formnovalidate
+                    data-confirm="{% t 'game.delete_confirm' %}">
+              {% t "game.delete_report" %}
+            </button>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </dialog>
+{% endif %}
+
+<script>
+  (function () {
+    // --- Подсказки к полям -------------------------------------------------
+    // Пузырь живёт в том же слое, что и подсказка: внутри <dialog> — чтобы
+    // не обрезался прокруткой окна, на странице — прямо в <body>.
+    const tips = new Map();
+
+    function tipFor(container) {
+      let tip = tips.get(container);
+      if (!tip) {
+        tip = document.createElement("div");
+        tip.className = "tip";
+        tip.hidden = true;
+        container.appendChild(tip);
+        tips.set(container, tip);
+      }
+      return tip;
+    }
+
+    function showTip(hint) {
+      const container = hint.closest("dialog") || document.body;
+      const tip = tipFor(container);
+      tip.textContent = hint.dataset.tip;
+      tip.hidden = false;
+      const box = hint.getBoundingClientRect();
+      const size = tip.getBoundingClientRect();
+      const bounds = container === document.body
+        ? { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight }
+        : container.getBoundingClientRect();
+      const margin = 10;
+      let left = box.left + box.width / 2 - size.width / 2;
+      left = Math.max(bounds.left + margin, Math.min(left, bounds.right - size.width - margin));
+      let top = box.top - size.height - 8;
+      if (top < bounds.top + margin) top = box.bottom + 8;
+      tip.style.left = left + "px";
+      tip.style.top = top + "px";
+    }
+
+    function hideTips() {
+      tips.forEach(function (tip) { tip.hidden = true; });
+    }
+
+    document.querySelectorAll(".hint").forEach(function (hint) {
+      hint.addEventListener("pointerenter", function () { showTip(hint); });
+      hint.addEventListener("pointerleave", hideTips);
+      hint.addEventListener("focus", function () { showTip(hint); });
+      hint.addEventListener("blur", hideTips);
+      // На сенсорном экране наведения нет — подсказка открывается касанием.
+      hint.addEventListener("click", function () { showTip(hint); });
+    });
+    window.addEventListener("scroll", hideTips, true);
+    window.addEventListener("resize", hideTips);
+
+    // --- Описание игры: пять строк и кнопка «Читать полностью» --------------
+    const descriptions = document.querySelectorAll("[data-description]");
+
+    function syncDescription(box) {
+      const toggle = box.parentElement.querySelector("[data-description-toggle]");
+      const text = box.querySelector("p");
+      if (!toggle || !text) return;
+      const expanded = box.classList.contains("is-expanded");
+      const overflow = text.scrollHeight > text.clientHeight + 2;
+      box.classList.toggle("is-clamped", overflow && !expanded);
+      toggle.hidden = !overflow && !expanded;
+    }
+
+    descriptions.forEach(function (box) {
+      const toggle = box.parentElement.querySelector("[data-description-toggle]");
+      if (!toggle) return;
+      syncDescription(box);
+      toggle.addEventListener("click", function () {
+        const expanded = box.classList.toggle("is-expanded");
+        toggle.textContent = expanded ? toggle.dataset.less : toggle.dataset.more;
+        syncDescription(box);
+      });
+    });
+
+    // При изменении окна текст может перестать обрезаться или наоборот.
+    if (descriptions.length) {
+      let resizeTimer;
+      window.addEventListener("resize", function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+          descriptions.forEach(syncDescription);
+        }, 120);
+      });
+    }
+
+    // --- Модальное окно с формой оценки ------------------------------------
+    const dialog = document.getElementById("report-dialog");
+    if (!dialog) return;
+
+    document.querySelectorAll("[data-report-open]").forEach(function (button) {
+      button.addEventListener("click", function () { dialog.showModal(); });
+    });
+    dialog.querySelectorAll("[data-report-close]").forEach(function (button) {
+      button.addEventListener("click", function () { dialog.close(); });
+    });
+    // Удаление необратимо, поэтому спрашиваем подтверждение до отправки.
+    dialog.querySelectorAll("[data-confirm]").forEach(function (button) {
+      button.addEventListener("click", function (event) {
+        if (!window.confirm(button.dataset.confirm)) event.preventDefault();
+      });
+    });
+    dialog.addEventListener("click", function (event) {
+      // Клик по затемнённому фону закрывает окно, клик по содержимому — нет.
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener("close", hideTips);
+
+    {% if report_form_open %}dialog.showModal();{% endif %}
+  })();
+</script>
+{% endblock %}

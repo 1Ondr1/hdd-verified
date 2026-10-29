@@ -1,0 +1,31 @@
+{% extends "games/base.html" %}
+{% load i18n_extras %}
+
+{% block title %}{% t "search.title_tag" q=q %}{% endblock %}
+
+{% block content %}
+<h1>{% t "search.heading" %}</h1>
+
+{% if error %}
+  <p class="message message--error">{{ error }}</p>
+{% endif %}
+
+{% if results %}
+  <div class="grid">
+    {% for item in results %}
+      <a class="card" href="{{ item.url }}">
+        <img src="{{ item.image }}" alt="{{ item.name }}" loading="lazy" decoding="async"
+             {% if item.fallback_image %}onerror="this.onerror=null;this.src='{{ item.fallback_image|escapejs }}'"{% endif %}>
+        <div class="card-body">
+          <h3>{{ item.name }}</h3>
+          {% if item.source == "epic" %}<p class="muted">Epic Games</p>{% endif %}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% elif q and not error %}
+  <p class="muted">{% t "search.empty" %}</p>
+{% else %}
+  <p class="muted">{% t "search.prompt" %}</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "games/base.html" %}
+{% load i18n_extras %}
+
+{% block title %}{% t "auth.logged_out_title" %} — HDD Verified{% endblock %}
+
+{% block content %}
+<h1>{% t "auth.logged_out_title" %}</h1>
+<p class="muted">
+  <a href="{% url 'login' %}">{% t "auth.login_again" %}</a>
+  ·
+  <a href="{% url 'home' %}">{% t "auth.home_link" %}</a>
+</p>
+{% endblock %}

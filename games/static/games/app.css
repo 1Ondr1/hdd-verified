@@ -1,0 +1,1487 @@
+:root {
+  --bg: #0f1115;
+  --panel: #181b22;
+  --panel-soft: #20242d;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #e8e9ed;
+  --muted: #9aa0ac;
+  --accent: #4c8dff;
+  --green: #2e9e5b;
+  --amber: #c08a2a;
+  --red: #c04a4a;
+  --radius: 16px;
+  --control-bg: #1c212b;
+  --control-border: rgba(255, 255, 255, 0.12);
+  --control-hover-border: rgba(255, 255, 255, 0.22);
+  --focus-ring: 0 0 0 3px rgba(76, 141, 255, 0.18);
+}
+
+* { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+/* --- Скроллбары --------------------------------------------------------- */
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #39414f transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #39414f;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4a5364;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1200px 600px at 20% -10%, #1d2433 0%, transparent 60%),
+    var(--bg);
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+h1 { font-size: 28px; margin: 0 0 16px; }
+h2 { font-size: 20px; margin: 0 0 16px; }
+h3 { font-size: 15px; margin: 0; }
+p { line-height: 1.6; }
+
+.muted { color: var(--muted); }
+.align-right { text-align: right; }
+
+/* --- Каркас ------------------------------------------------------------- */
+
+.container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+}
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  border-bottom: 1px solid var(--border);
+  background: rgba(15, 17, 21, 0.82);
+  backdrop-filter: blur(14px);
+}
+
+.header-inner {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 20px;
+  /* Та же ширина, что у контента: логотип и кнопки стоят ровно над
+     левым и правым краем страницы. */
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 12px 20px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  color: #fff;
+}
+.brand:hover { text-decoration: none; }
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(140deg, var(--accent), #2f6ad9);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.brand-text { display: flex; flex-direction: column; line-height: 1.2; }
+.brand-name { font-size: 16px; font-weight: 800; white-space: nowrap; }
+.brand-tagline { font-size: 11px; color: var(--muted); }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: end;
+}
+
+/* Переключатель языка: компактная кнопка с текущим кодом, а список
+   языков раскрывается по клику. Так он помещается в шапку даже на телефоне. */
+.lang-menu { position: relative; margin: 0; }
+
+.lang-menu__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  list-style: none;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.lang-menu__summary::-webkit-details-marker { display: none; }
+.lang-menu__summary:hover { color: var(--text); border-color: var(--control-hover-border); }
+.lang-menu__details[open] .lang-menu__summary {
+  color: var(--text);
+  border-color: var(--control-hover-border);
+}
+
+.lang-menu__chevron {
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.15s ease, margin-top 0.15s ease;
+}
+.lang-menu__details[open] .lang-menu__chevron {
+  margin-top: 1px;
+  transform: rotate(-135deg);
+}
+
+.lang-menu__list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  min-width: 156px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-soft);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.lang-menu__item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lang-menu__item:hover { background: rgba(255, 255, 255, 0.07); }
+.lang-menu__item.is-active { color: var(--accent); font-weight: 600; }
+
+/* Меню пользователя на <details>: без JS-зависимостей. */
+.user-menu { position: relative; }
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 5px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  list-style: none;
+  transition: border-color 0.15s ease;
+}
+.user-chip::-webkit-details-marker { display: none; }
+.user-chip:hover { border-color: var(--control-hover-border); }
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--panel-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.avatar--image { display: block; object-fit: cover; }
+
+.user-name { font-size: 13px; font-weight: 600; }
+
+.user-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 190px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-soft);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.user-popover__name {
+  margin: 0;
+  padding: 6px 10px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.user-popover__link {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.user-popover__link:hover { background: rgba(255, 255, 255, 0.07); text-decoration: none; }
+.user-popover__button { color: #ff9a9a; }
+.user-popover form { margin: 0; }
+
+
+/* --- Кнопки и ссылки ---------------------------------------------------- */
+
+.button {
+  display: inline-block;
+  padding: 11px 20px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.button:hover { filter: brightness(1.08); text-decoration: none; }
+.button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.button--small { padding: 8px 14px; font-size: 14px; }
+.button--secondary { background: transparent; border-color: var(--accent); color: var(--accent); }
+.button--ghost {
+  border-color: var(--control-border);
+  background: transparent;
+  color: var(--text);
+}
+.button--ghost:hover { border-color: var(--control-hover-border); background: rgba(255, 255, 255, 0.04); }
+.button--danger {
+  border-color: rgba(192, 74, 74, 0.6);
+  background: transparent;
+  color: #ff9a9a;
+}
+.button--danger:hover { border-color: var(--red); background: rgba(192, 74, 74, 0.12); }
+
+.link-button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+.link-button:hover { text-decoration: underline; }
+
+/* --- Поиск -------------------------------------------------------------- */
+
+.hero { padding: 48px 0 24px; text-align: center; }
+.hero h1 { font-size: clamp(26px, 4vw, 40px); }
+
+.search {
+  display: flex;
+  gap: 10px;
+  max-width: 640px;
+  margin: 24px auto 0;
+}
+
+.search-field { position: relative; flex: 1; }
+
+.search input {
+  width: 100%;
+  padding: 14px 18px;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background: var(--control-bg);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.search input:focus { border-color: var(--accent); box-shadow: var(--focus-ring); }
+
+.suggest {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-soft);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+.suggest[hidden] { display: none; }
+
+.suggest a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  color: var(--text);
+}
+.suggest a:hover,
+.suggest a.active { background: rgba(255, 255, 255, 0.08); text-decoration: none; }
+.suggest a.active { box-shadow: inset 2px 0 0 var(--accent); }
+.suggest img { width: 48px; height: 24px; border-radius: 4px; object-fit: cover; }
+
+/* --- Карточки игр ------------------------------------------------------- */
+
+.section { margin-top: 40px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 18px;
+}
+
+.card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: inherit;
+  transition: transform 0.15s ease;
+}
+.card:hover { transform: translateY(-3px); text-decoration: none; }
+.card img { display: block; width: 100%; aspect-ratio: 460 / 215; object-fit: cover; }
+.card-body { padding: 12px 14px; }
+.card-body p { margin: 6px 0 0; font-size: 13px; }
+
+/* --- Карточка игры ------------------------------------------------------ */
+
+/* --- Шапка игры: обложка, описание, факты ------------------------------- */
+
+.game-head {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+/* Правая колонка: описание и карточка требований одной стопкой, поэтому
+   карточка всегда прижата к тексту, а не к низу обложки. */
+.game-main { min-width: 0; }
+
+.cover {
+  display: block;
+  width: 100%;
+  margin: 0 auto;
+  border-radius: var(--radius);
+}
+
+.game-info p { margin: 8px 0; }
+
+/*
+ * Описание фиксированной высоты: пять строк, дальше — плавное затухание
+ * и кнопка «Читать полностью». Так шапка не растягивается на пол-экрана,
+ * а высота правой колонки остаётся близкой к высоте обложки.
+ */
+.game-description { position: relative; margin-top: 8px; }
+.game-description p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  overflow: hidden;
+  margin: 0;
+}
+.game-description::after {
+  content: "";
+  display: none;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 42px;
+  background: linear-gradient(rgba(15, 17, 21, 0), var(--bg));
+  pointer-events: none;
+}
+.game-description.is-clamped::after { display: block; }
+.game-description.is-expanded p {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: none;
+}
+.game-description.is-expanded::after { display: none; }
+
+.game-description__toggle {
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.game-description__toggle:hover { text-decoration: underline; }
+.game-description__toggle[hidden] { display: none; }
+
+/* --- Требования и размер игры ------------------------------------------- */
+
+/* Как в первой версии: простой список без рамки — он не спорит с описанием
+   и занимает минимум места. На среднем экране (см. медиазапросы) список
+   раскрывается на всю ширину страницы. */
+.facts {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+}
+.facts .fact { display: flex; gap: 14px; align-items: baseline; min-width: 0; }
+.facts dt { flex: none; min-width: 96px; color: var(--muted); font-size: 13px; }
+.facts dd { margin: 0; display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: 14px; }
+.fact__line { font-size: 14px; }
+.fact__line--strong { font-weight: 600; }
+.fact__warning { color: var(--amber); font-size: 12px; }
+
+.panel {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+/* Сводка: оценка слева, прогноз для диска и классы — справа.
+   Один блок вместо двух карточек: так видно и общую картину, и то,
+   как игра пойдёт на конкретном накопителе. */
+.summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  margin-top: 20px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.summary__main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 24px;
+}
+
+.summary__aside {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  padding: 22px 24px;
+  border-left: 1px solid var(--border);
+  background: var(--panel-soft);
+}
+
+.summary h2 { margin: 0; font-size: 18px; }
+
+.summary__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.summary__count { font-size: 12.5px; white-space: nowrap; }
+
+.summary-card__subtitle {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.rating__note { margin: 0; font-size: 13px; }
+
+/* Выжимка: сколько отчётов каждого вердикта. */
+.verdict-mix { margin-top: 2px; }
+
+.verdict-bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.verdict-bar__part { height: 100%; }
+.verdict-bar__part--playable { background: var(--green); }
+.verdict-bar__part--limited { background: var(--amber); }
+.verdict-bar__part--unplayable { background: var(--red); }
+
+.verdict-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.verdict-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.verdict-legend b { color: var(--text); font-weight: 600; }
+.verdict-legend li.is-empty { opacity: 0.5; }
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.dot--playable { background: var(--green); }
+.dot--limited { background: var(--amber); }
+.dot--unplayable { background: var(--red); }
+
+/* Прогноз для диска пользователя. */
+.prediction { display: flex; flex-direction: column; }
+
+.prediction__drive { margin: 0 0 10px; font-size: 12.5px; }
+.prediction__value { margin: 0; }
+.prediction__basis { margin: 7px 0 0; font-size: 12px; }
+.prediction__hint { margin: 0; font-size: 13px; }
+
+.score { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+
+/* Разбивка по классам накопителей — отдельный блок во всю ширину:
+   сразу видно, как игра ведёт себя на каждом классе диска. Цвет полоски
+   и подписи повторяют вердикт, поэтому строку можно прочитать без таблицы. */
+/* --- Классы накопителей ------------------------------------------------- */
+
+/* Свёрнутая панель: заголовок работает как кнопка, строки раскрываются
+   по клику. По умолчанию закрыто — блок нужен не на каждой странице. */
+.classes-panel { padding: 0; }
+
+.classes-panel .classes-panel__head {
+  position: relative;
+  justify-content: center;
+  margin: 0;
+  padding: 14px 20px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.classes-panel .classes-panel__head::-webkit-details-marker { display: none; }
+.classes-panel .classes-panel__head h2 { margin: 0; text-align: center; }
+/* Заголовок — не ссылка: цвет не меняем ни при наведении, ни после клика.
+   Отклик даём лёгким фоном, и только там, где есть настоящий курсор. */
+@media (hover: hover) and (pointer: fine) {
+  .classes-panel .classes-panel__head:hover { background: rgba(255, 255, 255, 0.03); }
+}
+.classes-panel[open] .classes-panel__head { border-bottom: 1px solid var(--border); }
+
+.classes-panel__chevron {
+  position: absolute;
+  top: 50%;
+  right: 24px;
+  width: 8px;
+  height: 8px;
+  margin-top: -6px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform 0.15s ease, margin-top 0.15s ease;
+}
+.classes-panel[open] .classes-panel__chevron {
+  margin-top: -2px;
+  transform: rotate(-135deg);
+}
+
+.classes-panel__body { padding: 16px 20px 20px; }
+
+.class-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* Строки не растягиваются на всю ширину панели: при изменении окна
+     колонки остаются на месте, а группа стоит по центру. */
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.class-row {
+  display: grid;
+  grid-template-columns: minmax(0, 100px) minmax(120px, 1fr) 44px minmax(0, 130px) 68px;
+  grid-template-areas: "label track percent verdict count";
+  align-items: center;
+  gap: 10px;
+}
+
+.class-row__label {
+  grid-area: label;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.class-row__track {
+  grid-area: track;
+  display: block;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.class-row__bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--green);
+}
+.class-row--mixed .class-row__bar { background: var(--amber); }
+.class-row--unplayable .class-row__bar { background: var(--red); }
+
+.class-row__percent {
+  grid-area: percent;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.class-row__verdict {
+  grid-area: verdict;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.class-row--playable .class-row__verdict { color: var(--green); }
+.class-row--mixed .class-row__verdict { color: var(--amber); }
+.class-row--unplayable .class-row__verdict { color: var(--red); }
+
+.class-row__count {
+  grid-area: count;
+  text-align: right;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.panel-head h2 { margin-bottom: 16px; }
+
+.panel-head__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Кнопка оценки не должна прижиматься к строке «Ваша оценка» под ней. */
+.reports-panel .panel-head { margin-bottom: 16px; }
+
+.my-report {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+  font-size: 13px;
+}
+
+/* --- Бейджи ------------------------------------------------------------- */
+
+.badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.badge--playable { background: var(--green); color: #fff; }
+.badge--limited,
+.badge--mixed { background: var(--amber); color: #1b1405; }
+.badge--unplayable { background: var(--red); color: #fff; }
+.badge--no_data {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--muted);
+}
+
+.chip {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.chip--accent { border-color: var(--accent); color: var(--accent); }
+.chip--warn { border-color: var(--amber); color: var(--amber); }
+
+/* --- Отчёты ------------------------------------------------------------- */
+
+.report {
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+.report:first-of-type { border-top: none; }
+.report-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+.report p { margin: 8px 0 0; }
+
+/* Перевод комментария: по умолчанию скрыт, открывается по клику. */
+.report-translation { margin-top: 6px; }
+.report-translation > summary {
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  list-style: none;
+}
+.report-translation > summary::-webkit-details-marker { display: none; }
+.report-translation > summary:hover { text-decoration: underline; }
+.report-translation__text { border-left: 2px solid var(--border); padding-left: 10px; }
+.report-translation__note { font-size: 12.5px; }
+.report-translation__form { margin: 6px 0 0; }
+.report-translation__button { font-size: 13px; }
+
+/* Линия отделяет список отчётов от фильтра над ним. */
+.reports {
+  margin-top: 18px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+/* --- Фильтр отчётов ----------------------------------------------------- */
+
+/*
+ * Тот же язык, что у формы оценки: подпись со знаком вопроса, контролы
+ * одной высоты, кнопки справа по нижнему краю контролов.
+ */
+/*
+ * Компактная группа: два нешироких списка и кнопки сразу за ними.
+ * Содержимое прижато влево, поэтому между списками и кнопками нет
+ * «дыры», а кнопки не уезжают на отдельную строку при сужении окна.
+ */
+.filter {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 190px)) max-content;
+  justify-content: center;
+  align-items: end;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.filter__field { min-width: 0; }
+
+.filter__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-left: 14px;
+  border-left: 1px solid var(--border);
+}
+
+/* --- Справка по характеристикам ---------------------------------------- */
+
+.howto {
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.howto__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+.howto__summary::-webkit-details-marker { display: none; }
+.howto__summary:hover .howto__title { color: var(--accent); }
+
+.howto__summary::after {
+  content: "▾";
+  color: var(--muted);
+  font-size: 12px;
+  transition: transform 0.15s ease;
+}
+.howto[open] .howto__summary::after { transform: rotate(180deg); }
+
+.howto__title { font-size: 14px; font-weight: 600; }
+
+.howto__hint { font-size: 12px; color: var(--muted); }
+
+.howto[open] .howto__summary { border-bottom: 1px solid var(--border); }
+
+.howto__body { padding: 16px; }
+.howto__body h3 { margin: 18px 0 8px; }
+.howto__body h3:first-of-type { margin-top: 0; }
+.howto__body p { margin: 8px 0; }
+.howto__note {
+  margin-top: 18px !important;
+  padding: 10px 12px;
+  border-left: 3px solid var(--amber);
+  border-radius: 8px;
+  background: rgba(192, 138, 42, 0.1);
+  font-size: 13px;
+}
+
+.code {
+  overflow-x: auto;
+  margin: 8px 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #0b0d11;
+  color: #cfe0ff;
+  font-family: "Cascadia Code", Consolas, "SFMono-Regular", monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.code code { white-space: pre; }
+
+/* --- Таблица дисков ----------------------------------------------------- */
+
+.drives { width: 100%; border-collapse: collapse; }
+.drives tr { border-bottom: 1px solid var(--border); }
+.drives td { padding: 14px 0; vertical-align: top; }
+
+/* --- Формы -------------------------------------------------------------- */
+
+/*
+ * Единый набор контролов: одинаковые высота, радиус, фон и состояния
+ * у текстовых полей, списков, текстовых областей и кнопок.
+ */
+
+.form p { margin: 0 0 16px; }
+.form label { display: block; margin-bottom: 7px; font-size: 13px; color: var(--muted); }
+
+.form input[type="text"],
+.form input[type="number"],
+.form input[type="password"],
+.form input[type="email"],
+.form input[type="search"],
+.form textarea,
+.form select {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background-color: var(--control-bg);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.4;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.form textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.form select {
+  appearance: none;
+  padding-right: 42px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%239aa0ac' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px 8px;
+  cursor: pointer;
+}
+
+.form select option {
+  background: var(--panel);
+  color: var(--text);
+}
+
+/* Числовое поле без стрелок: они ломают вид и не нужны — шаг задан.
+   Колесо мыши и клавиши со стрелками продолжают работать. */
+.form input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.form input[type="number"]::-webkit-outer-spin-button,
+.form input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.form input:hover,
+.form textarea:hover,
+.form select:hover { border-color: var(--control-hover-border); }
+
+.form input:focus,
+.form textarea:focus,
+.form select:focus {
+  border-color: var(--accent);
+  background-color: var(--panel-soft);
+  box-shadow: var(--focus-ring);
+}
+
+.form input:disabled,
+.form textarea:disabled,
+.form select:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.form input::placeholder,
+.form textarea::placeholder { color: #6f7787; }
+
+.form input[type="checkbox"],
+.form input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0 10px 0 0;
+  border: 1.5px solid var(--control-border);
+  background-color: var(--control-bg);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form input[type="checkbox"] { border-radius: 5px; }
+.form input[type="radio"] { border-radius: 50%; }
+
+.form input[type="checkbox"]:hover,
+.form input[type="radio"]:hover { border-color: var(--control-hover-border); }
+
+.form input[type="checkbox"]:checked,
+.form input[type="radio"]:checked {
+  border-color: var(--accent);
+  background-color: var(--accent);
+}
+
+.form input[type="checkbox"]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='10' viewBox='0 0 12 10'%3E%3Cpath d='M1 5.2 4.2 8.4 11 1.6' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 11px 9px;
+}
+
+.form input[type="radio"]:checked {
+  background-image: radial-gradient(circle, #fff 0 3.5px, transparent 3.5px);
+}
+
+.form input[type="checkbox"]:focus-visible,
+.form input[type="radio"]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Чекбокс в as_p идёт после подписи — ставим его первым и выравниваем. */
+.form p:has(> input[type="checkbox"]),
+.form p:has(> input[type="radio"]) {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.form p:has(> input[type="checkbox"]) > label,
+.form p:has(> input[type="radio"]) > label {
+  order: 2;
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.form p:has(> input[type="checkbox"]) > input,
+.form p:has(> input[type="radio"]) > input { order: 1; }
+
+.form p:has(> .errorlist) input,
+.form p:has(> .errorlist) textarea,
+.form p:has(> .errorlist) select { border-color: var(--red); }
+
+/* Вердикт — набор «пилюль» вместо голых радиокнопок: три равные ячейки,
+   выбранная окрашена в цвет вердикта. */
+.form--report #id_verdict {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.form--report #id_verdict > div { display: grid; margin: 0; }
+
+.form--report #id_verdict label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background: var(--control-bg);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.form--report #id_verdict label:hover { border-color: var(--control-hover-border); }
+
+.form--report #id_verdict input { margin: 0; }
+
+.form--grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+.form--grid p { margin-bottom: 16px; }
+.form--grid .wide,
+.form--grid button { grid-column: 1 / -1; }
+.form--grid button { justify-self: start; }
+
+/* Форма оценки в модальном окне: короткие поля идут в один ряд, длинные —
+   во всю ширину. Каждое поле — своя ячейка: подпись, контрол, ошибка,
+   поэтому строки не разъезжаются. */
+.form--report {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 16px;
+  align-items: start;
+}
+
+.form--report .field { margin: 0; }
+.form--report .field--wide { grid-column: 1 / -1; }
+.form--report .field > label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Подпись и знак вопроса стоят в одну строку. */
+.field__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+.field__head > label { margin: 0; font-size: 13px; color: var(--muted); }
+
+/* Знак вопроса: подсказка появляется при наведении и с клавиатуры. */
+.hint {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 17px;
+  height: 17px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: help;
+  user-select: none;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.hint:hover,
+.hint:focus-visible {
+  color: var(--text);
+  border-color: var(--control-hover-border);
+  outline: none;
+}
+
+/* Пузырь подсказки живёт внутри <dialog>, поэтому не обрезается его прокруткой. */
+.tip {
+  position: fixed;
+  z-index: 5;
+  width: max-content;
+  max-width: 250px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.45;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+.tip[hidden] { display: none; }
+
+/* Накопитель отделён от блока с самой оценкой. */
+.form--report .field--drive {
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.form--report .errorlist {
+  margin: 7px 0 0;
+  padding: 0;
+  list-style: none;
+  color: #ff8f8f;
+  font-size: 12.5px;
+}
+
+.form--report .field:has(.errorlist) select,
+.form--report .field:has(.errorlist) input:not([type="radio"]),
+.form--report .field:has(.errorlist) textarea { border-color: var(--red); }
+
+.form--report .field--verdict:has(.errorlist) #id_verdict label {
+  border-color: rgba(192, 74, 74, 0.55);
+}
+
+/* Вердикт: окраска выбранной «пилюли» в цвет вердикта. */
+.form--report #id_verdict label:has(input[value="playable"]:checked) {
+  border-color: var(--green);
+  background: rgba(46, 158, 91, 0.16);
+}
+.form--report #id_verdict label:has(input[value="mixed"]:checked),
+.form--report #id_verdict label:has(input[value="limited"]:checked) {
+  border-color: var(--amber);
+  background: rgba(192, 138, 42, 0.16);
+}
+.form--report #id_verdict label:has(input[value="unplayable"]:checked) {
+  border-color: var(--red);
+  background: rgba(192, 74, 74, 0.16);
+}
+
+.form--report #id_verdict label:has(input[value="playable"]:checked) input {
+  border-color: var(--green);
+  background-color: var(--green);
+}
+.form--report #id_verdict label:has(input[value="mixed"]:checked) input,
+.form--report #id_verdict label:has(input[value="limited"]:checked) input {
+  border-color: var(--amber);
+  background-color: var(--amber);
+}
+.form--report #id_verdict label:has(input[value="unplayable"]:checked) input {
+  border-color: var(--red);
+  background-color: var(--red);
+}
+
+/* Кнопки отделены линией и прижаты вправо. */
+.form--report .modal__actions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  margin-top: 2px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+/* Удаление — отдельно от «Сохранить» и «Отмена», слева. В разметке кнопка
+   стоит последней, чтобы Enter в форме сохранял оценку, а не удалял её. */
+.form--report .modal__actions .button--danger {
+  order: -1;
+  margin-right: auto;
+}
+
+.form ul { list-style: none; margin: 0; padding: 0; }
+.form ul li { margin-bottom: 6px; }
+.form ul label { display: inline; color: var(--text); font-size: 14px; }
+
+.form .helptext { display: block; margin-top: 6px; font-size: 12px; color: var(--muted); }
+
+/*
+ * Django отдаёт подсказки пароля как <ul> внутри <span class="helptext">.
+ * Браузер не разрешает список внутри span и выносит его наружу, поэтому
+ * стилизуем такой список отдельно.
+ */
+.form > ul {
+  margin: -8px 0 16px;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.form > ul li { margin: 0; }
+.form .errorlist { margin: 6px 0; padding: 0; list-style: none; color: #ff8f8f; font-size: 13px; }
+
+.autocomplete { position: relative; margin-bottom: 16px; }
+
+.autocomplete input[type="text"] {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background: var(--control-bg);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.autocomplete input[type="text"]:focus {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.autocomplete .suggest a { flex-direction: column; align-items: flex-start; gap: 2px; }
+.autocomplete .suggest .muted { font-size: 12px; }
+
+/* --- Модальное окно с формой оценки ------------------------------------- */
+
+.modal {
+  width: min(780px, calc(100vw - 32px));
+  max-height: min(88vh, 780px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+
+.modal::backdrop {
+  background: rgba(6, 8, 12, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.modal__body { padding: 22px 24px 24px; }
+
+.modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.modal__head h2 { margin: 0; font-size: 20px; }
+
+.modal__close {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.modal__close svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.modal__close:hover { color: var(--text); border-color: var(--control-hover-border); }
+.modal__close:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.modal__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+/* --- Сообщения ---------------------------------------------------------- */
+
+.messages { padding-bottom: 0; }
+
+.message {
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--panel-soft);
+  font-size: 14px;
+}
+.message--success { border-left: 3px solid var(--green); }
+.message--error { border-left: 3px solid var(--red); }
+.message--info { border-left: 3px solid var(--accent); }
+
+/* --- Адаптив ------------------------------------------------------------ */
+
+@media (max-width: 820px) {
+  .header-inner {
+    padding: 10px 16px;
+  }
+
+  .brand-tagline { display: none; }
+  .user-name { display: none; }
+  .user-chip { padding: 5px; }
+}
+
+@media (max-width: 520px) {
+  /* Бренд и кнопки остаются в одной строке: логотип слева, действия
+     справа. Второй строки нет — иначе кнопки «уезжают» под логотип. */
+  .header-inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .header-actions {
+    gap: 6px;
+    justify-self: end;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+  }
+  .brand-mark { width: 34px; height: 34px; }
+  .brand-name { font-size: 14px; }
+  .header-actions .button--small { padding: 6px 9px; font-size: 12.5px; }
+  .lang-menu__summary { padding: 5px 8px; }
+  .howto__hint { display: none; }
+}
+
+@media (max-width: 360px) {
+  .brand-text { display: none; }
+}
+
+@media (max-width: 1000px) {
+  /* Колонка «раскрывается»: описание и карточка становятся отдельными
+     элементами сетки, и карточка растягивается на всю ширину — то есть
+     оказывается и под обложкой. Пока хватает места — в две колонки. */
+  .game-main { display: contents; }
+  .game-info { grid-column: 2; grid-row: 1; }
+  .facts {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 28px;
+  }
+}
+
+@media (max-width: 560px) {
+  /* На телефоне две колонки уже не читаются — записи идут друг под другом. */
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Обложка и текст делят ширину примерно поровну и сжимаются вместе. */
+  .game-head {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Текст стал шире — четырёх строк достаточно,
+     чтобы шапка не превращалась в простыню. */
+  .game-description p { -webkit-line-clamp: 4; }
+  .game-description::after { height: 34px; }
+}
+
+@media (max-width: 720px) {
+  /* Здесь текст уже не помещается рядом с обложкой — уводим его под неё. */
+  .game-head {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  /* Одна колонка: и описание, и карточка занимают её целиком. */
+  .game-info,
+  .facts { grid-column: 1 / -1; grid-row: auto; }
+
+  /* Форма оценки на компактных экранах: одна колонка, кнопки липнут к низу. */
+  .modal {
+    width: min(520px, calc(100vw - 20px));
+    max-height: 92vh;
+  }
+  .modal__body { padding: 18px 18px 20px; }
+  .form--report { grid-template-columns: minmax(0, 1fr); }
+  .form--report #id_verdict { grid-template-columns: minmax(0, 1fr); }
+  .form--report .modal__actions {
+    position: sticky;
+    bottom: 0;
+    margin: 4px -18px -20px;
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    border-radius: 0 0 var(--radius) var(--radius);
+    background: var(--panel);
+  }
+
+  /* Фильтр на узком экране — колонкой, кнопки слева. */
+  .filter { grid-template-columns: minmax(0, 1fr); }
+  .filter__actions {
+    justify-content: flex-start;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .summary { grid-template-columns: minmax(0, 1fr); }
+  .summary__aside {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  /* Классы на узком экране: название с числом отчётов, под ними полоска,
+     а под полоской — процент и вердикт. */
+  .class-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "label count"
+      "track track"
+      "percent verdict";
+    gap: 6px 12px;
+  }
+  .class-row__label { font-size: 13px; }
+  .class-row__percent { text-align: left; font-size: 13px; }
+  .class-row__verdict { text-align: right; }
+  .search { flex-direction: column; }
+  .drives td { padding: 12px 0; }
+}
+
+@media (max-width: 520px) {
+  /* На телефоне описание и так читается тяжело — оставляем три строки. */
+  .game-description p { -webkit-line-clamp: 3; }
+  .game-description::after { height: 26px; }
+}

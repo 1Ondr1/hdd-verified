@@ -1,0 +1,10 @@
+{% extends "games/base.html" %}
+{% load i18n_extras %}
+
+{% block title %}{% t "error.title" %} — HDD Verified{% endblock %}
+
+{% block content %}
+<h1>{% t "error.title" %}</h1>
+<p class="muted">{{ message }}</p>
+<p><a href="{% url 'home' %}">{% t "error.back" %}</a></p>
+{% endblock %}

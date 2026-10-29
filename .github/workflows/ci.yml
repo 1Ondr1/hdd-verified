@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+      DJANGO_DEBUG: "1"
+      DJANGO_SECRET_KEY: "ci-only-not-a-secret"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --frozen
+      - name: Django check
+        run: uv run python manage.py check
+      - name: Check for missing migrations
+        run: uv run python manage.py makemigrations --check --dry-run
+      - name: Tests
+        run: uv run python manage.py test
+      - name: Ruff
+        run: uv run ruff check .

@@ -1,0 +1,22 @@
+[project]
+name = "hdd-verified"
+version = "0.1.0"
+description = "Каталог совместимости игр с жёсткими дисками"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=6.1.2",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.17,<0.18",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["**/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]

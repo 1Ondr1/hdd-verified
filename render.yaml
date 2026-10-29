@@ -1,0 +1,50 @@
+# Blueprint для Render: https://render.com/docs/blueprint-spec
+#
+# База данных — Neon (внешний PostgreSQL), поэтому DATABASE_URL
+# вводится вручную в панели Render. Render Postgres на free-плане
+# удаляется через 30 дней, Neon Free — нет.
+
+services:
+  - type: web
+    name: hdd-verified
+    runtime: python
+    plan: free
+    region: frankfurt
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /health/
+    buildCommand: >-
+      uv sync --frozen --no-group dev &&
+      uv run python manage.py collectstatic --noinput &&
+      uv run python manage.py migrate --noinput
+    startCommand: >-
+      uv run gunicorn config.wsgi:application
+      --bind 0.0.0.0:$PORT
+      --worker-class gthread
+      --workers 2
+      --threads 4
+      --timeout 60
+      --access-logfile -
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "0"
+      - key: DJANGO_TRUST_PROXY_SSL_HEADER
+        value: "1"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSLMODE
+        value: require
+      - key: STEAM_API_KEY
+        sync: false
+      - key: DEEPL_API_KEY
+        sync: false
+      - key: STEAMGRIDDB_API_KEY
+        sync: false
+      - key: DJANGO_LOG_LEVEL
+        value: INFO

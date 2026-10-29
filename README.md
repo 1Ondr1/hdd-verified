@@ -121,10 +121,39 @@ uv sync
 .\.venv\Scripts\python.exe manage.py test
 ```
 
+## Прод
+
+Боевой режим включается переменными окружения, а не правкой кода:
+
+```env
+DJANGO_DEBUG=0
+DJANGO_SECRET_KEY=<длинная случайная строка>
+DJANGO_ALLOWED_HOSTS=hdd-verified.onrender.com
+DJANGO_CSRF_TRUSTED_ORIGINS=https://hdd-verified.onrender.com
+DJANGO_TRUST_PROXY_SSL_HEADER=1
+DATABASE_URL=postgresql://user:password@host/db
+```
+
+- **База.** При заполненном `DATABASE_URL` используется PostgreSQL
+  (`psycopg`), иначе — локальный `db.sqlite3`. Для Neon/Render TLS
+  включается сам (`sslmode=require`).
+- **Статика.** WhiteNoise отдаёт файлы из процесса, отдельный nginx не
+  нужен. Перед запуском: `python manage.py collectstatic --noinput`.
+- **HTTPS.** При `DJANGO_DEBUG=0` включены редирект на HTTPS, защищённые
+  cookie и HSTS на год. Исключение — `/health/`: его опрашивает хостинг.
+- **Здоровье.** `GET /health/` возвращает `{"status": "ok"}` (200), если
+  база отвечает, и 503, если нет.
+- **Логи.** Пишутся в stdout одной строкой (`DJANGO_LOG_LEVEL`), их видно
+  в панели хостинга.
+
+Деплой на Render описан в `render.yaml` (free-план, регион Frankfurt,
+база — Neon). Полная пошаговая инструкция появится перед публикацией.
+
 ## Структура
 
 ```
-config/            настройки, маршруты, загрузка .env
+render.yaml        blueprint Render: сборка, gunicorn, /health/
+config/            настройки, маршруты, загрузка .env, /health/
 games/
   models.py        Game, DriveProfile, UserDrive, Report, SteamProfile
   i18n.py          словарь переводов RU/EN без GNU gettext
@@ -150,7 +179,6 @@ games/
 1. Парсер вывода `Get-PhysicalDisk` / `smartctl --json`, чтобы диск
    определялся одной командой.
 2. Кэширование сводок в отдельной таблице при росте числа отчётов.
-3. PostgreSQL вместо SQLite при выходе в прод.
 
 ## Лицензия
 

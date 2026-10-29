@@ -347,6 +347,16 @@ TRANSLATIONS: dict[str, tuple[str, str]] = {
     # --- Ошибки ---------------------------------------------------------
     "error.title": ("Не удалось загрузить игру", "Could not load the game"),
     "error.back": ("Вернуться на главную", "Back to the home page"),
+    "error.not_found_title": ("Страница не найдена", "Page not found"),
+    "error.not_found_text": (
+        "Такой страницы нет или она переехала. Проверьте адрес или вернитесь на главную.",
+        "This page does not exist or has moved. Check the address or go back home.",
+    ),
+    "error.server_title": ("Что-то сломалось", "Something went wrong"),
+    "error.server_text": (
+        "Ошибка на нашей стороне. Мы уже видим её в логах — попробуйте обновить страницу через минуту.",
+        "The error is on our side. It is already in the logs — try refreshing in a minute.",
+    ),
 }
 
 
@@ -573,6 +583,14 @@ UKRAINIAN: dict[str, str] = {
     # --- Ошибки ---------------------------------------------------------
     "error.title": "Не вдалося завантажити гру",
     "error.back": "Повернутися на головну",
+    "error.not_found_title": "Сторінку не знайдено",
+    "error.not_found_text": (
+        "Такої сторінки немає або вона переїхала. Перевірте адресу або поверніться на головну."
+    ),
+    "error.server_title": "Щось зламалося",
+    "error.server_text": (
+        "Помилка на нашому боці. Ми вже бачимо її в логах — спробуйте оновити сторінку за хвилину."
+    ),
 }
 
 

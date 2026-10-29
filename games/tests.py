@@ -1920,3 +1920,55 @@ class DriveViewsTests(ProfileFixtureMixin, TestCase):
         self.assertEqual(
             form.fields["drive"].empty_label, "Не знаю свой накопитель"
         )
+
+
+class HealthTests(TestCase):
+    def test_health_reports_ok_when_database_answers(self):
+        response = self.client.get(reverse("health"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+
+    def test_health_reports_error_when_database_is_down(self):
+        with patch("config.health.connection") as connection:
+            connection.cursor.side_effect = RuntimeError("database is down")
+
+            response = self.client.get(reverse("health"))
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json(), {"status": "error"})
+
+    def test_health_rejects_post(self):
+        response = self.client.post(reverse("health"))
+
+        self.assertEqual(response.status_code, 405)
+
+
+class ErrorPageTests(TestCase):
+    def test_unknown_page_uses_custom_404(self):
+        response = self.client.get("/no-such-page/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTemplateUsed(response, "404.html")
+        self.assertContains(response, "Страница не найдена", status_code=404)
+
+    def test_500_template_renders_without_context(self):
+        from django.template.loader import render_to_string
+
+        html = render_to_string("500.html")
+
+        self.assertIn("Что-то сломалось", html)
+
+
+class StaticFilesTests(TestCase):
+    def test_favicon_redirects_to_svg(self):
+        response = self.client.get("/favicon.ico")
+
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response["Location"], "/static/games/favicon.svg")
+
+    def test_base_template_links_favicon(self):
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, 'rel="icon"')
+        self.assertContains(response, "/static/games/favicon.svg")

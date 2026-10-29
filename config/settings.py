@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 
 from config.env import load_env
@@ -56,6 +57,25 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", ("localhost", "127.0.0.1", "[::
 if env_bool("DJANGO_TRUST_PROXY_SSL_HEADER", False):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+
+X_FRAME_OPTIONS = "DENY"
+SECURE_REFERRER_POLICY = "same-origin"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+
+if not DEBUG:
+    # В проде сайт живёт только на HTTPS. Проверка /health/ остаётся
+    # доступной по http: её опрашивает сам хостинг изнутри сети.
+    SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
+    SECURE_REDIRECT_EXEMPT = [r"^health/$"]
+    SESSION_COOKIE_SECURE = env_bool("DJANGO_SECURE_COOKIES", True)
+    CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
+    SECURE_HSTS_SECONDS = env_int("DJANGO_HSTS_SECONDS", 31536000)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_HSTS_INCLUDE_SUBDOMAINS", True)
+    SECURE_HSTS_PRELOAD = env_bool("DJANGO_HSTS_PRELOAD", True)
+
 
 # --- Приложения -------------------------------------------------------------
 
@@ -71,6 +91,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -112,12 +133,31 @@ ASGI_APPLICATION = "config.asgi.application"
 
 # --- База данных ------------------------------------------------------------
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+# В проде — PostgreSQL по DATABASE_URL (Neon, Render Postgres и т. п.).
+# Без переменной остаётся SQLite: так разработка не требует сервера БД.
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=env_int("DATABASE_CONN_MAX_AGE", 600),
+            conn_health_checks=True,
+        )
     }
-}
+    if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
+        # Neon и Render требуют TLS. Если sslmode уже есть в адресе,
+        # он имеет приоритет.
+        DATABASES["default"].setdefault("OPTIONS", {}).setdefault(
+            "sslmode", os.environ.get("DATABASE_SSLMODE", "require")
+        )
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # --- Аутентификация ---------------------------------------------------------
@@ -142,24 +182,36 @@ LANGUAGES = [
     ("en", "English"),
     ("uk", "Українська"),
 ]
-TIME_ZONE = "Europe/Moscow"
+# Все отметки времени хранятся и показываются в UTC: сервер, база и
+# пользователи могут быть в разных часовых поясах.
+TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
 
 # --- Статика ----------------------------------------------------------------
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# WhiteNoise отдаёт статику прямо из процесса: отдельный веб-сервер
+# на бесплатном хостинге не нужен. Manifest-хранилище намеренно не
+# используем: без запущенного collectstatic оно ломает страницы и тесты,
+# а файлов у проекта мало. Кэш — час, дальше браузер проверяет ETag.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
+WHITENOISE_MAX_AGE = env_int("WHITENOISE_MAX_AGE", 0 if DEBUG else 3600)
 
 
 # --- Почта ------------------------------------------------------------------
 
-MAILERS = {
-    "default": {
-        "BACKEND": "django.core.mail.backends.console.EmailBackend",
-    },
-}
+# Почту сайт не отправляет: уведомлений и подтверждений нет, вход только
+# через Steam. Настройки MAILERS не задаём — остаётся штатный SMTP,
+# который просто не используется.
 
 
 # --- Кэш --------------------------------------------------------------------
@@ -196,3 +248,41 @@ STEAM_API_KEY = os.environ.get("STEAM_API_KEY", "")
 # на «:fx» и работают через отдельный адрес API.
 DEEPL_API_KEY = os.environ.get("DEEPL_API_KEY", "")
 DEEPL_TIMEOUT = env_int("DEEPL_TIMEOUT", 15)
+
+
+# --- Логи -------------------------------------------------------------------
+
+# Почты на сайте нет: ошибки и предупреждения видны только в логах
+# хостинга и в админке. Формат — одна строка, удобная для Render.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "format": "{asctime} {levelname} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "django.security": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+    },
+}

@@ -8,22 +8,34 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST
 
-from games.forms import AddDriveForm, ReportFilterForm, ReportForm
+from games.forms import AddDriveForm, ComplaintForm, ReportFilterForm, ReportForm
 from games.i18n import current_language, translate
-from games.models import CommentTranslation, Game, Report, UserDrive
+from games.models import (
+    CommentTranslation,
+    Complaint,
+    Game,
+    Report,
+    ReportLike,
+    UserDrive,
+)
 from games.services import epic, stats, steam
 from games.services import search as game_search
 from games.services import steam_auth
 from games.services import translate as translation_service
 from games.services.epic import is_valid_external_id
 from games.services.games import get_or_create_game
+from games.services.permissions import block_banned
 from games.services.reports import save_report
+
+#: Сколько отчётов показывать сразу. Остальные — по кнопке «Показать ещё».
+REPORTS_PER_PAGE = 10
 
 
 def _validate_game_id(source: str, external_id: str) -> None:
@@ -117,6 +129,7 @@ def legacy_submit_report(request, appid: int):
 
 @login_required
 @require_POST
+@block_banned
 def submit_report(request, source: str, external_id: str):
     """Сохранить или обновить отчёт пользователя."""
     _validate_game_id(source, external_id)
@@ -146,6 +159,7 @@ def submit_report(request, source: str, external_id: str):
 
 @login_required
 @require_POST
+@block_banned
 def delete_report(request, pk: int):
     """Удалить свою оценку игры. Чужие отчёты недоступны."""
     report = get_object_or_404(Report, pk=pk, user=request.user)
@@ -155,7 +169,61 @@ def delete_report(request, pk: int):
     return redirect(game)
 
 
+@login_required
 @require_POST
+@block_banned
+def toggle_like(request, pk: int):
+    """Поставить или снять отметку «Полезно».
+
+    Свой отчёт отмечать нельзя: это накрутка, а не оценка полезности.
+    Повторный клик снимает отметку — отдельной кнопки «убрать» нет.
+    """
+    report = get_object_or_404(Report, pk=pk, hidden=False)
+    if report.user_id == request.user.pk:
+        messages.error(request, translate("like.own"))
+        return redirect(_back_url(request, report))
+
+    like, created = ReportLike.objects.get_or_create(
+        report=report, user=request.user
+    )
+    if not created:
+        like.delete()
+    return redirect(_back_url(request, report))
+
+
+@login_required
+@require_POST
+@block_banned
+def complain(request, pk: int):
+    """Отправить жалобу на отчёт. Одна жалоба на отчёт от пользователя."""
+    report = get_object_or_404(Report, pk=pk, hidden=False)
+    if report.user_id == request.user.pk:
+        messages.error(request, translate("complaint.own"))
+        return redirect(_back_url(request, report))
+
+    form = ComplaintForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, translate("complaint.invalid"))
+        return redirect(_back_url(request, report))
+
+    _, created = Complaint.objects.get_or_create(
+        report=report,
+        author=request.user,
+        defaults={
+            "reason": form.cleaned_data["reason"],
+            "comment": form.cleaned_data["comment"],
+        },
+    )
+    messages.success(
+        request,
+        translate("msg.complaint_sent" if created else "msg.complaint_exists"),
+    )
+    return redirect(_back_url(request, report))
+
+
+@login_required
+@require_POST
+@block_banned
 def translate_comment(request, pk: int):
     """Перевести комментарий отчёта на язык интерфейса и вернуться назад."""
     report = get_object_or_404(Report, pk=pk, hidden=False)
@@ -166,11 +234,15 @@ def translate_comment(request, pk: int):
         if not translation_service.available():
             messages.error(request, translate("report.translate_unavailable"))
             return redirect(_back_url(request, report))
+        if translation_service.quota_exhausted(request.user.pk):
+            messages.error(request, translate("report.translate_quota"))
+            return redirect(_back_url(request, report))
         try:
             text = translation_service.translate(report.comment, language)
         except translation_service.TranslationError:
             messages.error(request, translate("report.translate_failed"))
             return redirect(_back_url(request, report))
+        translation_service.consume_quota(request.user.pk)
         translation, _ = CommentTranslation.objects.get_or_create(
             report=report, language=language, defaults={"text": text}
         )
@@ -204,6 +276,7 @@ def my_drives(request):
 
 @login_required
 @require_POST
+@block_banned
 def add_drive(request):
     """Добавить накопитель в профиль: название и характеристики."""
     form = AddDriveForm(request.POST)
@@ -248,6 +321,7 @@ def add_drive(request):
 
 @login_required
 @require_POST
+@block_banned
 def remove_drive(request, pk: int):
     """Убрать накопитель из своего профиля (отчёты сохраняются)."""
     request.user.drives.filter(pk=pk).delete()
@@ -335,16 +409,19 @@ def _game_context(request, game: Game, form: ReportForm | None = None) -> dict:
 
     filter_form = ReportFilterForm(request.GET or None)
     filters = filter_form.cleaned_data if filter_form.is_valid() else {}
-    reports = list(
+    paginator = Paginator(
         stats.filtered_reports(
             game,
             rpm=filters.get("rpm"),
             recording=filters.get("recording"),
-        )
+        ),
+        REPORTS_PER_PAGE,
     )
+    page_obj = paginator.get_page(request.GET.get("page"))
+    reports = list(page_obj.object_list)
 
-    # Готовые переводы подтягиваем одним запросом и вешаем на отчёты,
-    # чтобы шаблон не ходил в базу для каждого комментария.
+    # Готовые переводы и отметки «Полезно» подтягиваем одним запросом
+    # на страницу, чтобы шаблон не ходил в базу для каждого отчёта.
     language = current_language()
     translations = {
         row.report_id: row.text
@@ -352,8 +429,16 @@ def _game_context(request, game: Game, form: ReportForm | None = None) -> dict:
             report__in=reports, language=language
         )
     }
+    liked_ids = set()
+    if user.is_authenticated:
+        liked_ids = set(
+            ReportLike.objects.filter(user=user, report__in=reports).values_list(
+                "report_id", flat=True
+            )
+        )
     for report in reports:
         report.comment_translation = translations.get(report.pk)
+        report.liked_by_me = report.pk in liked_ids
 
     try:
         translated_id = int(request.GET.get("translated", ""))
@@ -369,6 +454,8 @@ def _game_context(request, game: Game, form: ReportForm | None = None) -> dict:
         "requirement_note": stats.requirement_note(game),
         "size": stats.size_summary(game),
         "reports": reports,
+        "reports_total": paginator.count,
+        "page_obj": page_obj,
         "translated_id": translated_id,
         "translate_available": translation_service.available(),
         "filter_form": filter_form,

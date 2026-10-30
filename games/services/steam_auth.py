@@ -138,6 +138,7 @@ def get_or_create_user(steam_id: str, profile: dict[str, str]):
     from django.contrib.auth.models import User
 
     from games.models import SteamProfile
+    from games.services.permissions import sync_admin_flags
 
     steam_profile = (
         SteamProfile.objects.select_related("user")
@@ -146,6 +147,7 @@ def get_or_create_user(steam_id: str, profile: dict[str, str]):
     )
     if steam_profile is not None:
         _update_profile(steam_profile, profile)
+        sync_admin_flags(steam_profile.user, steam_id)
         return steam_profile.user
 
     user, _ = User.objects.get_or_create(username=f"steam_{steam_id}")
@@ -155,6 +157,7 @@ def get_or_create_user(steam_id: str, profile: dict[str, str]):
         persona_name=profile.get("persona_name", ""),
         avatar_url=profile.get("avatar_url", ""),
     )
+    sync_admin_flags(user, steam_id)
     return user
 
 

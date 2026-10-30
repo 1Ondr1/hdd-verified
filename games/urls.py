@@ -17,6 +17,8 @@ urlpatterns = [
     ),
     path("game/<int:appid>/report/", views.legacy_submit_report, name="legacy_submit_report"),
     path("reports/<int:pk>/translate/", views.translate_comment, name="translate_comment"),
+    path("reports/<int:pk>/like/", views.toggle_like, name="toggle_like"),
+    path("reports/<int:pk>/complain/", views.complain, name="complain"),
     path("reports/<int:pk>/delete/", views.delete_report, name="delete_report"),
     path("game/<str:source>/<str:external_id>/", views.game_detail, name="game_detail"),
     path("game/<int:appid>/", views.legacy_game_detail, name="legacy_game_detail"),

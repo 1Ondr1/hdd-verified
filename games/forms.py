@@ -5,7 +5,7 @@ from __future__ import annotations
 from django import forms
 
 from games.i18n import LazyText, translate
-from games.models import Report, UserDrive, format_capacity
+from games.models import Complaint, Report, UserDrive, format_capacity
 from games.services.drives import profile_for
 
 #: Основные объёмы жёстких дисков. Пустое значение — «не знаю»: объём
@@ -196,6 +196,28 @@ class ReportForm(NoColonFormMixin, forms.ModelForm):
             ("", translate("load.unspecified")),
             *[(value, translate(f"load.short.{value}")) for value, _ in Report.LoadSpeed.choices],
         ]
+
+
+class ComplaintForm(NoColonFormMixin, forms.ModelForm):
+    """Жалоба на отчёт: причина и необязательное пояснение."""
+
+    reason = forms.ChoiceField(
+        label=LazyText("complaint.reason"),
+        choices=[
+            (value, LazyText(f"complaint.reason.{value}"))
+            for value in Complaint.Reason.values
+        ],
+    )
+    comment = forms.CharField(
+        label=LazyText("complaint.comment"),
+        required=False,
+        max_length=1000,
+        widget=forms.Textarea(attrs={"rows": 2}),
+    )
+
+    class Meta:
+        model = Complaint
+        fields = ("reason", "comment")
 
 
 def _as_int(value: str | None) -> int | None:

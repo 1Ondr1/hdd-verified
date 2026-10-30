@@ -18,10 +18,13 @@ from django.utils import timezone, translation
 from games.forms import AddDriveForm, ReportFilterForm, ReportForm
 from games.i18n import translate_plural
 from games.models import (
+    Ban,
     CommentTranslation,
+    Complaint,
     DriveProfile,
     Game,
     Report,
+    ReportLike,
     SteamProfile,
     UserDrive,
 )
@@ -607,6 +610,10 @@ class CommentTranslationTests(TestCase):
             verdict=Report.Verdict.PLAYABLE,
             comment="Игра идёт с фризами",
         )
+
+    def setUp(self):
+        # Перевод доступен только вошедшим: анонимный клик уходил бы в Steam.
+        self.client.force_login(self.user)
 
     def _url(self) -> str:
         return reverse("translate_comment", args=[self.report.pk])
@@ -1958,6 +1965,238 @@ class ErrorPageTests(TestCase):
         html = render_to_string("500.html")
 
         self.assertIn("Что-то сломалось", html)
+
+
+def make_steam_user(username: str, steam_id: str) -> User:
+    """Пользователь с привязанным SteamID64 — как после входа через Steam."""
+    user = User.objects.create_user(username=username, password="pass12345")
+    SteamProfile.objects.create(user=user, steam_id=steam_id)
+    return user
+
+
+class LikeTests(TestCase):
+    def setUp(self):
+        self.author = make_steam_user("author", "76561198000000001")
+        self.reader = make_steam_user("reader", "76561198000000002")
+        self.game = Game.objects.create(
+            source=Game.Source.STEAM, external_id="400", title="Like Game"
+        )
+        self.report = Report.objects.create(
+            game=self.game,
+            user=self.author,
+            verdict=Report.Verdict.PLAYABLE,
+            comment="Полезный отзыв",
+        )
+
+    def _url(self) -> str:
+        return reverse("toggle_like", args=[self.report.pk])
+
+    def test_like_is_added_and_removed_by_second_click(self):
+        self.client.force_login(self.reader)
+
+        self.client.post(self._url(), {"next": "/game/steam/400/"})
+        self.assertTrue(
+            ReportLike.objects.filter(report=self.report, user=self.reader).exists()
+        )
+
+        self.client.post(self._url(), {"next": "/game/steam/400/"})
+        self.assertFalse(
+            ReportLike.objects.filter(report=self.report, user=self.reader).exists()
+        )
+
+    def test_own_report_cannot_be_liked(self):
+        self.client.force_login(self.author)
+
+        self.client.post(self._url(), {"next": "/game/steam/400/"})
+
+        self.assertFalse(ReportLike.objects.exists())
+
+    def test_anonymous_like_goes_to_steam_login(self):
+        response = self.client.post(self._url())
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response.url)
+
+    def test_liked_reports_are_listed_first(self):
+        other = make_steam_user("other", "76561198000000003")
+        fresh = Report.objects.create(
+            game=self.game,
+            user=other,
+            verdict=Report.Verdict.LIMITED,
+            comment="Свежий отзыв",
+        )
+        ReportLike.objects.create(report=self.report, user=self.reader)
+
+        response = self.client.get(reverse("game_detail", args=["steam", "400"]))
+
+        reports = response.context["reports"]
+        self.assertEqual(reports[0].pk, self.report.pk)
+        self.assertEqual(reports[0].like_count, 1)
+        self.assertEqual(reports[1].pk, fresh.pk)
+
+
+class ComplaintTests(TestCase):
+    def setUp(self):
+        self.author = make_steam_user("author", "76561198000000011")
+        self.reader = make_steam_user("reader", "76561198000000012")
+        self.game = Game.objects.create(
+            source=Game.Source.STEAM, external_id="500", title="Complaint Game"
+        )
+        self.report = Report.objects.create(
+            game=self.game,
+            user=self.author,
+            verdict=Report.Verdict.PLAYABLE,
+        )
+
+    def _url(self) -> str:
+        return reverse("complain", args=[self.report.pk])
+
+    def test_complaint_is_created_once(self):
+        self.client.force_login(self.reader)
+
+        self.client.post(self._url(), {"reason": "spam", "comment": "Реклама"})
+        self.client.post(self._url(), {"reason": "abuse", "comment": "Ещё раз"})
+
+        complaint = Complaint.objects.get(report=self.report)
+        self.assertEqual(complaint.reason, "spam")
+        self.assertEqual(complaint.author, self.reader)
+        self.assertEqual(Complaint.objects.count(), 1)
+
+    def test_own_report_cannot_be_reported(self):
+        self.client.force_login(self.author)
+
+        self.client.post(self._url(), {"reason": "spam"})
+
+        self.assertFalse(Complaint.objects.exists())
+
+    def test_invalid_reason_is_rejected(self):
+        self.client.force_login(self.reader)
+
+        self.client.post(self._url(), {"reason": "nonsense"})
+
+        self.assertFalse(Complaint.objects.exists())
+
+
+class BanTests(TestCase):
+    def setUp(self):
+        self.user = make_steam_user("banned", "76561198000000021")
+        self.game = Game.objects.create(
+            source=Game.Source.STEAM, external_id="600", title="Ban Game"
+        )
+
+    def test_partial_ban_blocks_writing_but_allows_reading(self):
+        Ban.objects.create(steam_id=self.user.steam_profile.steam_id, reason="спам")
+        self.client.force_login(self.user)
+
+        self.assertEqual(
+            self.client.get(reverse("game_detail", args=["steam", "600"])).status_code,
+            200,
+        )
+        response = self.client.post(
+            reverse("submit_report", args=["steam", "600"]),
+            {"verdict": "playable"},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Report.objects.exists())
+
+    def test_full_ban_closes_reading(self):
+        Ban.objects.create(
+            steam_id=self.user.steam_profile.steam_id, full=True
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("game_detail", args=["steam", "600"]))
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTemplateUsed(response, "games/banned.html")
+
+    def test_inactive_ban_is_ignored(self):
+        Ban.objects.create(
+            steam_id=self.user.steam_profile.steam_id, full=True, active=False
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("game_detail", args=["steam", "600"]))
+
+        self.assertEqual(response.status_code, 200)
+
+
+class AdminAccessTests(TestCase):
+    admin_steam_id = "76561198000000031"
+
+    def test_admin_requires_steam_allowlist(self):
+        user = make_steam_user("notadmin", "76561198000000032")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("admin:index"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/admin/login/", response.url)
+
+        # Второй шаг — уже наш вход через Steam, парольной формы нет.
+        response = self.client.get(response.url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response.url)
+
+    @override_settings(ADMIN_STEAM_IDS=[admin_steam_id])
+    def test_allowlisted_steam_user_opens_admin(self):
+        user = make_steam_user("admin", self.admin_steam_id)
+        user.is_staff = True
+        user.is_superuser = True
+        user.save(update_fields=["is_staff", "is_superuser"])
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("admin:index"))
+
+        self.assertEqual(response.status_code, 200)
+
+    @override_settings(ADMIN_STEAM_IDS=[admin_steam_id])
+    def test_steam_login_syncs_admin_flags(self):
+        user = steam_auth.get_or_create_user(self.admin_steam_id, {})
+
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.is_superuser)
+
+    @override_settings(ADMIN_STEAM_IDS=[])
+    def test_removed_from_allowlist_loses_admin(self):
+        user = make_steam_user("former", self.admin_steam_id)
+        user.is_staff = True
+        user.is_superuser = True
+        user.save(update_fields=["is_staff", "is_superuser"])
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("admin:index"))
+
+        self.assertEqual(response.status_code, 302)
+
+
+class ReportPaginationTests(TestCase):
+    def setUp(self):
+        self.game = Game.objects.create(
+            source=Game.Source.STEAM, external_id="700", title="Many Reports"
+        )
+        for index in range(12):
+            user = User.objects.create_user(username=f"user{index}")
+            Report.objects.create(
+                game=self.game,
+                user=user,
+                verdict=Report.Verdict.PLAYABLE,
+                comment=f"Отзыв {index}",
+            )
+
+    def test_first_page_has_ten_reports_and_next_link(self):
+        response = self.client.get(reverse("game_detail", args=["steam", "700"]))
+
+        self.assertEqual(len(response.context["reports"]), 10)
+        self.assertTrue(response.context["page_obj"].has_next())
+        self.assertContains(response, "Показать ещё")
+
+    def test_second_page_has_the_rest(self):
+        response = self.client.get(
+            reverse("game_detail", args=["steam", "700"]), {"page": 2}
+        )
+
+        self.assertEqual(len(response.context["reports"]), 2)
+        self.assertFalse(response.context["page_obj"].has_next())
 
 
 class StaticFilesTests(TestCase):

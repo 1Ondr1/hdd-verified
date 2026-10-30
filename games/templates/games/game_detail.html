@@ -167,7 +167,7 @@
       <h2>{% t "game.reports" %}</h2>
       <div class="panel-head__actions">
         {% if filter_active %}
-          <span class="chip chip--accent">{% t "game.filter_active" n=reports|length %}</span>
+          <span class="chip chip--accent">{% t "game.filter_active" n=reports_total %}</span>
         {% endif %}
         {% if user.is_authenticated %}
           {% if form %}
@@ -238,7 +238,7 @@
                 <p class="report-translation__text">{{ report.comment_translation }}</p>
                 <p class="report-translation__note muted">{% t "report.translate_note" %}</p>
               </details>
-            {% elif translate_available %}
+            {% elif translate_available and user.is_authenticated %}
               <form class="report-translation__form" method="post"
                     action="{% url 'translate_comment' report.id %}">
                 {% csrf_token %}
@@ -249,6 +249,43 @@
               </form>
             {% endif %}
           {% endif %}
+
+          <div class="report-actions">
+            {% if user.is_authenticated and user.pk != report.user_id %}
+              <form method="post" action="{% url 'toggle_like' report.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit"
+                        class="chip chip--like{% if report.liked_by_me %} is-active{% endif %}"
+                        aria-pressed="{% if report.liked_by_me %}true{% else %}false{% endif %}"
+                        title="{% if report.liked_by_me %}{% t 'like.remove' %}{% else %}{% t 'like.add' %}{% endif %}">
+                  {% t "like.button" %} · {{ report.like_count }}
+                </button>
+              </form>
+            {% elif report.like_count %}
+              <span class="chip">{% t "like.button" %} · {{ report.like_count }}</span>
+            {% endif %}
+
+            {% if user.is_authenticated and user.pk != report.user_id %}
+              <details class="report-complaint">
+                <summary class="link-button">{% t "complaint.link" %}</summary>
+                <form class="form report-complaint__form" method="post"
+                      action="{% url 'complain' report.id %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <select name="reason" aria-label="{% t 'complaint.reason' %}" required>
+                    <option value="spam">{% t "complaint.reason.spam" %}</option>
+                    <option value="abuse">{% t "complaint.reason.abuse" %}</option>
+                    <option value="wrong">{% t "complaint.reason.wrong" %}</option>
+                    <option value="other">{% t "complaint.reason.other" %}</option>
+                  </select>
+                  <input type="text" name="comment" maxlength="1000"
+                         placeholder="{% t 'complaint.comment' %}">
+                  <button type="submit" class="button button--small">{% t "complaint.send" %}</button>
+                </form>
+              </details>
+            {% endif %}
+          </div>
         </div>
       {% empty %}
         <p class="muted">
@@ -256,6 +293,13 @@
         </p>
       {% endfor %}
     </div>
+
+    {% if page_obj.has_next %}
+      <div class="reports-more">
+        <a class="button button--ghost" href="{% querystring page=page_obj.next_page_number %}"
+           data-reports-more>{% t "reports.more" %}</a>
+      </div>
+    {% endif %}
   </section>
 </article>
 
@@ -426,6 +470,54 @@
           descriptions.forEach(syncDescription);
         }, 120);
       });
+    }
+
+    // --- Подгрузка отчётов: кнопка и автоподгрузка при прокрутке ----------
+    const more = document.querySelector("[data-reports-more]");
+    if (more) {
+      let loading = false;
+      const loadMore = async function () {
+        if (loading) return;
+        loading = true;
+        more.classList.add("is-loading");
+        try {
+          const response = await fetch(more.href, {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+          });
+          if (!response.ok) throw new Error("HTTP " + response.status);
+          const doc = new DOMParser().parseFromString(await response.text(), "text/html");
+          const list = document.querySelector(".reports");
+          doc.querySelectorAll(".reports .report").forEach(function (node) {
+            list.appendChild(node);
+          });
+          const next = doc.querySelector("[data-reports-more]");
+          if (next) {
+            more.href = next.href;
+            history.replaceState(null, "", next.href);
+          } else {
+            more.remove();
+          }
+        } catch (error) {
+          // Сеть или разметка подвели — работает обычная ссылка.
+          window.location.href = more.href;
+        } finally {
+          loading = false;
+          if (more.isConnected) more.classList.remove("is-loading");
+        }
+      };
+      more.addEventListener("click", function (event) {
+        event.preventDefault();
+        loadMore();
+      });
+      if ("IntersectionObserver" in window) {
+        const observer = new IntersectionObserver(function (entries) {
+          if (entries.some(function (entry) { return entry.isIntersecting; })) {
+            observer.disconnect();
+            loadMore();
+          }
+        }, { rootMargin: "300px" });
+        observer.observe(more);
+      }
     }
 
     // --- Модальное окно с формой оценки ------------------------------------

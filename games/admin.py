@@ -4,8 +4,19 @@ from __future__ import annotations
 
 from django.contrib import admin, messages
 from django.db.models import Count
+from django.urls import reverse
+from django.utils.html import format_html
 
-from games.models import DriveProfile, Game, Report, SteamProfile, UserDrive
+from games.models import (
+    Ban,
+    Complaint,
+    DriveProfile,
+    Game,
+    Report,
+    ReportLike,
+    SteamProfile,
+    UserDrive,
+)
 
 
 @admin.register(DriveProfile)
@@ -90,5 +101,76 @@ class ReportAdmin(admin.ModelAdmin):
         self.message_user(
             request,
             f"{'Скрыто' if hidden else 'Возвращено'} отчётов: {count}",
+            messages.SUCCESS,
+        )
+
+
+@admin.register(ReportLike)
+class ReportLikeAdmin(admin.ModelAdmin):
+    list_display = ("report", "user", "created")
+    search_fields = ("report__game__title", "user__username")
+    autocomplete_fields = ("report", "user")
+    readonly_fields = ("created",)
+    list_select_related = ("report", "report__game", "user")
+
+
+@admin.register(Complaint)
+class ComplaintAdmin(admin.ModelAdmin):
+    list_display = ("report_link", "author", "reason", "resolved", "created")
+    list_filter = ("resolved", "reason")
+    search_fields = ("report__game__title", "report__comment", "author__username", "comment")
+    autocomplete_fields = ("report", "author")
+    readonly_fields = ("created",)
+    date_hierarchy = "created"
+    list_select_related = ("report", "report__game", "author")
+    actions = ("resolve", "reopen")
+
+    @admin.display(description="Отчёт", ordering="report")
+    def report_link(self, obj: Complaint):
+        url = reverse("admin:games_report_change", args=[obj.report_id])
+        return format_html('<a href="{}">{}</a>', url, obj.report)
+
+    @admin.action(description="Отметить жалобы обработанными")
+    def resolve(self, request, queryset):
+        self._toggle(request, queryset, True)
+
+    @admin.action(description="Вернуть жалобы в работу")
+    def reopen(self, request, queryset):
+        self._toggle(request, queryset, False)
+
+    def _toggle(self, request, queryset, resolved: bool) -> None:
+        count = queryset.update(resolved=resolved)
+        self.message_user(
+            request,
+            f"{'Обработано' if resolved else 'Возвращено в работу'} жалоб: {count}",
+            messages.SUCCESS,
+        )
+
+
+@admin.register(Ban)
+class BanAdmin(admin.ModelAdmin):
+    list_display = ("steam_id", "full", "active", "reason_short", "created")
+    list_filter = ("active", "full")
+    search_fields = ("steam_id", "reason")
+    readonly_fields = ("created", "updated")
+    actions = ("activate", "deactivate")
+
+    @admin.display(description="Причина")
+    def reason_short(self, obj: Ban) -> str:
+        return obj.reason[:60] + ("…" if len(obj.reason) > 60 else "")
+
+    @admin.action(description="Включить выбранные баны")
+    def activate(self, request, queryset):
+        self._toggle(request, queryset, True)
+
+    @admin.action(description="Снять выбранные баны")
+    def deactivate(self, request, queryset):
+        self._toggle(request, queryset, False)
+
+    def _toggle(self, request, queryset, active: bool) -> None:
+        count = queryset.update(active=active)
+        self.message_user(
+            request,
+            f"{'Включено' if active else 'Снято'} банов: {count}",
             messages.SUCCESS,
         )

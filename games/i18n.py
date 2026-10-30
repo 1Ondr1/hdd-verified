@@ -242,6 +242,26 @@ TRANSLATIONS: dict[str, tuple[str, str]] = {
         "Перевод комментариев не настроен.",
         "Comment translation is not configured.",
     ),
+    "report.translate_quota": (
+        "Дневной лимит переводов исчерпан. Попробуйте завтра.",
+        "Daily translation limit reached. Try again tomorrow.",
+    ),
+    "reports.more": ("Показать ещё", "Show more"),
+    # --- Полезность и жалобы ---------------------------------------------
+    "like.button": ("Полезно", "Helpful"),
+    "like.add": ("Отметить как полезное", "Mark as helpful"),
+    "like.remove": ("Убрать отметку", "Remove mark"),
+    "like.own": ("Нельзя отмечать свой отчёт.", "You cannot mark your own review."),
+    "complaint.link": ("Пожаловаться", "Report"),
+    "complaint.reason": ("Причина", "Reason"),
+    "complaint.reason.spam": ("Спам или реклама", "Spam or advertising"),
+    "complaint.reason.abuse": ("Оскорбления", "Abuse"),
+    "complaint.reason.wrong": ("Неверные данные", "Wrong data"),
+    "complaint.reason.other": ("Другое", "Other"),
+    "complaint.comment": ("Комментарий (необязательно)", "Comment (optional)"),
+    "complaint.send": ("Отправить", "Send"),
+    "complaint.own": ("Нельзя жаловаться на свой отчёт.", "You cannot report your own review."),
+    "complaint.invalid": ("Проверьте причину жалобы.", "Check the complaint reason."),
     "verdict.playable": ("Играбельно", "Playable"),
     "verdict.limited": ("С оговорками", "With caveats"),
     "verdict.unplayable": ("Неиграбельно", "Unplayable"),
@@ -332,6 +352,11 @@ TRANSLATIONS: dict[str, tuple[str, str]] = {
         "Drive removed from your profile.",
     ),
     "msg.welcome": ("Добро пожаловать!", "Welcome!"),
+    "msg.complaint_sent": ("Жалоба отправлена. Спасибо!", "Complaint sent. Thank you!"),
+    "msg.complaint_exists": (
+        "Жалоба на этот отчёт уже отправлена.",
+        "You have already reported this review.",
+    ),
     # --- Аккаунт --------------------------------------------------------
     # Паролей на сайте нет: вход только через Steam OpenID.
     "auth.steam_error": (
@@ -357,6 +382,14 @@ TRANSLATIONS: dict[str, tuple[str, str]] = {
         "Ошибка на нашей стороне. Мы уже видим её в логах — попробуйте обновить страницу через минуту.",
         "The error is on our side. It is already in the logs — try refreshing in a minute.",
     ),
+    # --- Блокировка -----------------------------------------------------
+    "ban.title": ("Доступ ограничен", "Access restricted"),
+    "ban.text": (
+        "Администратор ограничил вашей учётной записи запись. Читать сайт можно.",
+        "An administrator has restricted writing for your account. You can still read the site.",
+    ),
+    "ban.reason": ("Причина", "Reason"),
+    "ban.logout": ("Выйти", "Sign out"),
 }
 
 
@@ -506,6 +539,23 @@ UKRAINIAN: dict[str, str] = {
         "Не вдалося перекласти коментар: сервіс перекладу недоступний."
     ),
     "report.translate_unavailable": "Переклад коментарів не налаштовано.",
+    "report.translate_quota": "Денний ліміт перекладів вичерпано. Спробуйте завтра.",
+    "reports.more": "Показати ще",
+    # --- Корисність і скарги --------------------------------------------
+    "like.button": "Корисно",
+    "like.add": "Позначити як корисне",
+    "like.remove": "Зняти позначку",
+    "like.own": "Не можна позначати власний відгук.",
+    "complaint.link": "Поскаржитися",
+    "complaint.reason": "Причина",
+    "complaint.reason.spam": "Спам або реклама",
+    "complaint.reason.abuse": "Образи",
+    "complaint.reason.wrong": "Неправильні дані",
+    "complaint.reason.other": "Інше",
+    "complaint.comment": "Коментар (необов'язково)",
+    "complaint.send": "Надіслати",
+    "complaint.own": "Не можна скаржитися на власний відгук.",
+    "complaint.invalid": "Перевірте причину скарги.",
     "verdict.playable": "Грабельно",
     "verdict.limited": "Із застереженнями",
     "verdict.unplayable": "Неграбельно",
@@ -573,6 +623,8 @@ UKRAINIAN: dict[str, str] = {
     "msg.drive_updated": "Накопичувач «{name}» оновлено.",
     "msg.drive_removed": "Накопичувач видалено з профілю.",
     "msg.welcome": "Ласкаво просимо!",
+    "msg.complaint_sent": "Скаргу надіслано. Дякуємо!",
+    "msg.complaint_exists": "Скаргу на цей відгук уже надіслано.",
     # --- Аккаунт --------------------------------------------------------
     "auth.steam_error": (
         "Не вдалося підтвердити вхід через Steam. Спробуйте ще раз."
@@ -591,6 +643,13 @@ UKRAINIAN: dict[str, str] = {
     "error.server_text": (
         "Помилка на нашому боці. Ми вже бачимо її в логах — спробуйте оновити сторінку за хвилину."
     ),
+    # --- Блокування -----------------------------------------------------
+    "ban.title": "Доступ обмежено",
+    "ban.text": (
+        "Адміністратор обмежив запис для вашого акаунта. Читати сайт можна."
+    ),
+    "ban.reason": "Причина",
+    "ban.logout": "Вийти",
 }
 
 

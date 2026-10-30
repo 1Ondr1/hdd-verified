@@ -799,6 +799,55 @@ p { line-height: 1.6; }
 .report-translation__form { margin: 6px 0 0; }
 .report-translation__button { font-size: 13px; }
 
+/* Полезность и жалоба: негромкие действия под текстом отчёта. */
+.report-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.report-actions form { margin: 0; }
+.chip--like {
+  cursor: pointer;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+.chip--like:hover,
+.chip--like.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.chip--like.is-active { background: rgba(76, 141, 255, 0.12); }
+
+.report-complaint > summary { font-size: 13px; }
+.report-complaint__form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.report-complaint__form select,
+.report-complaint__form input[type="text"] {
+  width: auto;
+  min-height: 36px;
+  padding: 7px 12px;
+  font-size: 13px;
+}
+.report-complaint__form input[type="text"] { flex: 1 1 180px; min-width: 0; }
+.report-complaint__form .button { min-height: 36px; padding: 7px 14px; }
+
+/* Кнопка «Показать ещё» и состояние автоподгрузки. */
+.reports-more {
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
+}
+.reports-more .is-loading { opacity: 0.5; pointer-events: none; }
+
 /* Линия отделяет список отчётов от фильтра над ним. */
 .reports {
   margin-top: 18px;

@@ -299,7 +299,11 @@ def filtered_reports(
     снимка характеристик (например, старые или без диска) в фильтр не
     попадают.
     """
-    reports = visible_reports(game).select_related("user", "profile")
+    reports = (
+        visible_reports(game)
+        .select_related("user__steam_profile", "profile")
+        .annotate(like_count=Count("likes"))
+    )
     rpm_value = _as_int(rpm)
     if rpm_value is not None:
         reports = reports.filter(drive_rpm=rpm_value)
@@ -307,7 +311,8 @@ def filtered_reports(
         reports = reports.filter(drive_smr=True)
     elif recording == "cmr":
         reports = reports.filter(drive_smr=False)
-    reports = reports.order_by("-updated")
+    # Сначала отчёты, которые сообщество отметило полезными, затем свежие.
+    reports = reports.order_by("-like_count", "-updated")
     return reports[:limit] if limit else reports
 
 

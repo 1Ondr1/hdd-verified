@@ -464,6 +464,111 @@ class Report(models.Model):
         return translate(f"load.{self.load_speed}") if self.load_speed else ""
 
 
+class ReportLike(models.Model):
+    """Отметка «Полезно» под отчётом.
+
+    Одна на пользователя и отчёт: повторный клик снимает отметку. Свой
+    отчёт отмечать нельзя — это проверяется во view, а не в модели,
+    чтобы правило было видно рядом с остальными правами.
+    """
+
+    report = models.ForeignKey(
+        Report, verbose_name="отчёт", related_name="likes", on_delete=models.CASCADE
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="пользователь",
+        related_name="report_likes",
+        on_delete=models.CASCADE,
+    )
+    created = models.DateTimeField("создан", auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("report", "user"), name="uniq_report_like_user"
+            ),
+        ]
+        ordering = ("-created",)
+        verbose_name = "отметка «полезно»"
+        verbose_name_plural = "отметки «полезно»"
+
+    def __str__(self) -> str:
+        return f"{self.report_id} ← {self.user_id}"
+
+
+class Complaint(models.Model):
+    """Жалоба на отчёт.
+
+    Жалобы не удаляют отчёт автоматически: они попадают в админку, где
+    модератор решает, скрыть отчёт или отклонить жалобу. Почта не
+    используется — список открывается в админке.
+    """
+
+    class Reason(models.TextChoices):
+        SPAM = "spam", "Спам или реклама"
+        ABUSE = "abuse", "Оскорбления"
+        WRONG = "wrong", "Неверные данные"
+        OTHER = "other", "Другое"
+
+    report = models.ForeignKey(
+        Report, verbose_name="отчёт", related_name="complaints", on_delete=models.CASCADE
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="автор жалобы",
+        related_name="complaints",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    reason = models.CharField("причина", max_length=10, choices=Reason.choices)
+    comment = models.TextField("комментарий", blank=True)
+    resolved = models.BooleanField("обработана", default=False)
+    created = models.DateTimeField("создана", auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("report", "author"), name="uniq_complaint_report_author"
+            ),
+        ]
+        ordering = ("-created",)
+        verbose_name = "жалоба"
+        verbose_name_plural = "жалобы"
+
+    def __str__(self) -> str:
+        return f"Жалоба на отчёт {self.report_id}"
+
+
+class Ban(models.Model):
+    """Бан по SteamID64.
+
+    Привязан к SteamID, а не к аккаунту сайта: удаление пользователя или
+    пересоздание записи бан не снимает. Обычный бан запрещает писать,
+    читать можно; полный закрывает сайт целиком.
+    """
+
+    steam_id = models.CharField("SteamID64", max_length=20, unique=True)
+    reason = models.TextField("причина", blank=True)
+    full = models.BooleanField(
+        "полный бан",
+        default=False,
+        help_text="Закрывает и чтение: пользователь увидит только страницу блокировки.",
+    )
+    active = models.BooleanField("активен", default=True)
+    created = models.DateTimeField("создан", auto_now_add=True)
+    updated = models.DateTimeField("обновлён", auto_now=True)
+
+    class Meta:
+        ordering = ("-created",)
+        verbose_name = "бан"
+        verbose_name_plural = "баны"
+
+    def __str__(self) -> str:
+        return f"{self.steam_id}{' (полный)' if self.full else ''}"
+
+
 class CommentTranslation(models.Model):
     """Машинный перевод комментария к отчёту на один язык.
 

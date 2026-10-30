@@ -13,6 +13,8 @@ import urllib.parse
 import urllib.request
 
 from django.conf import settings
+from django.core.cache import cache
+from django.utils import timezone
 
 from games.i18n import current_language
 
@@ -40,6 +42,37 @@ def target_language(language: str | None = None) -> str:
 def _endpoint() -> str:
     """Бесплатные ключи DeepL заканчиваются на «:fx» и ходят на свой адрес."""
     return FREE_URL if settings.DEEPL_API_KEY.endswith(":fx") else PRO_URL
+
+
+def _quota_key(user_id: int) -> str:
+    """Ключ суточной квоты: сбрасывается сам при смене даты."""
+    return f"deepl:quota:{timezone.localdate():%Y-%m-%d}:{user_id}"
+
+
+def quota_remaining(user_id: int) -> int:
+    """Сколько переводов осталось пользователю на сегодня."""
+    used = cache.get(_quota_key(user_id), 0)
+    return max(settings.DEEPL_DAILY_LIMIT - used, 0)
+
+
+def quota_exhausted(user_id: int) -> bool:
+    """Исчерпана ли суточная квота переводов."""
+    return quota_remaining(user_id) <= 0
+
+
+def consume_quota(user_id: int) -> None:
+    """Записать один израсходованный перевод.
+
+    Кэш общий для процесса: на бесплатном хостинге инстанс один, этого
+    достаточно. Квота защищает ключ DeepL от случайного перерасхода,
+    а не от целевого обхода.
+    """
+    key = _quota_key(user_id)
+    cache.add(key, 0, timeout=60 * 60 * 26)
+    try:
+        cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, timeout=60 * 60 * 26)
 
 
 def translate(text: str, language: str | None = None) -> str:

@@ -39,6 +39,12 @@ def env_int(name: str, default: int) -> int:
         return default
 
 
+def env_path(name: str, default: str) -> str:
+    """Прочитать путь URL и привести его к виду ``что-то/``."""
+    value = os.environ.get(name, default).strip().strip("/")
+    return f"{value}/" if value else default
+
+
 # --- Безопасность -----------------------------------------------------------
 
 DEBUG = env_bool("DJANGO_DEBUG", True)
@@ -58,6 +64,11 @@ if env_bool("DJANGO_TRUST_PROXY_SSL_HEADER", False):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+
+# Админка живёт по секретному адресу и впускает только перечисленные
+# SteamID64. Парольной формы нет: вход идёт через Steam.
+ADMIN_PATH = env_path("DJANGO_ADMIN_PATH", "admin/")
+ADMIN_STEAM_IDS = env_list("DJANGO_ADMIN_STEAM_IDS", ("76561198295815081",))
 
 X_FRAME_OPTIONS = "DENY"
 SECURE_REFERRER_POLICY = "same-origin"
@@ -80,7 +91,7 @@ if not DEBUG:
 # --- Приложения -------------------------------------------------------------
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
+    "config.apps.SteamAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -97,6 +108,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "games.middleware.BanMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -248,6 +260,8 @@ STEAM_API_KEY = os.environ.get("STEAM_API_KEY", "")
 # на «:fx» и работают через отдельный адрес API.
 DEEPL_API_KEY = os.environ.get("DEEPL_API_KEY", "")
 DEEPL_TIMEOUT = env_int("DEEPL_TIMEOUT", 15)
+# Сколько комментариев один пользователь может перевести за сутки.
+DEEPL_DAILY_LIMIT = env_int("DEEPL_DAILY_LIMIT", 20)
 
 
 # --- Логи -------------------------------------------------------------------

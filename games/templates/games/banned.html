@@ -1,0 +1,18 @@
+{% extends "games/base.html" %}
+{% load i18n_extras %}
+
+{% block title %}{% t "ban.title" %} — HDD Verified{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <h1>{% t "ban.title" %}</h1>
+  <p class="muted">{% t "ban.text" %}</p>
+  {% if ban.reason %}
+    <p class="muted">{% t "ban.reason" %}: {{ ban.reason }}</p>
+  {% endif %}
+  <form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button class="button" type="submit">{% t "ban.logout" %}</button>
+  </form>
+</section>
+{% endblock %}
